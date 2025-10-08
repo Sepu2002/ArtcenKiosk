@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
     <title>Self-Service Package Locker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Support for Tailwind's dark mode class strategy
         tailwind.config = {
@@ -14,7 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link rel="stylesheet" href="all.min.css">
+    <!-- Simple Keyboard CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -60,6 +61,30 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
         }
+        /* Virtual Keyboard Styling */
+        #keyboard-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: #2c2c2e;
+            padding: 5px;
+            display: none; /* Hidden by default */
+        }
+        .simple-keyboard.hg-theme-default {
+            background-color: #2c2c2e;
+            border-radius: 0;
+        }
+        .hg-theme-default .hg-button {
+            background: #555;
+            color: white;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+        }
+        .hg-theme-default .hg-button:active {
+            background: #444;
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen transition-colors duration-300">
@@ -82,6 +107,9 @@
 
     <!-- Modals Container -->
     <div id="modal-container"></div>
+    <!-- Virtual Keyboard Container -->
+    <div id="keyboard-container" class="simple-keyboard"></div>
+
     <input type="file" id="csv-file-input" class="hidden" accept=".csv">
 
     <script>
@@ -92,6 +120,11 @@
 
         // --- APPLICATION STATE ---
         let bays = [];
+
+        // --- VIRTUAL KEYBOARD ---
+        let Keyboard = window.SimpleKeyboard.default;
+        let keyboard;
+        let currentInput; // To track which input field is active
 
         // --- DOM ELEMENTS ---
         const themeToggleButton = document.getElementById('theme-toggle-button');
@@ -248,15 +281,16 @@
         function showAdminLogin() {
             const content = `
                 <p class="mb-4 text-gray-600 dark:text-gray-400">Please enter the admin password to continue.</p>
-                <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Password" inputmode="text">
+                <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Password">
                 <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Login</button>
             `;
             showModal('Admin Login', content);
-            document.getElementById('admin-password').focus();
+
+            // --- Show Keyboard ---
+            const input = document.getElementById('admin-password');
+            setupKeyboard(input);
+
             document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
-            document.getElementById('admin-password').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') verifyAdminPassword();
-            });
         }
 
         function verifyAdminPassword() {
@@ -334,10 +368,15 @@
             const content = `
                 <p class="mb-4 text-gray-600 dark:text-gray-400">Select an available bay and enter the customer's email.</p>
                 <select id="bay-select" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4">${bayOptions}</select>
-                <input type="email" id="customer-email" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="customer@example.com" inputmode="email">
+                <input type="email" id="customer-email" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="customer@example.com">
                 <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Deposit & Send Code</button>
             `;
             showModal('Deposit Package', content);
+            
+            // --- Show Keyboard ---
+            const input = document.getElementById('customer-email');
+            setupKeyboard(input);
+
             document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
         }
 
@@ -346,7 +385,7 @@
             const email = document.getElementById('customer-email').value;
 
             if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-                alert("Please enter a valid email address."); // Note: alert is used for simplicity
+                showModal("Invalid Email", "<p class='text-red-500'>Please enter a valid email address.</p>", 3000);
                 return;
             }
 
@@ -357,7 +396,7 @@
                 bay.occupied = true;
                 bay.customerEmail = email;
                 bay.pickupCode = pickupCode;
-                saveState(); // Auto-save state
+                saveState();
 
                 showModal('Opening Bay...', `<p class="dark:text-gray-300">Opening Bay ${selectedBayId}. Place the package inside and close the door.</p>`, 0);
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -365,9 +404,9 @@
                 const emailSent = await sendEmailWithQRCode(email, pickupCode);
                 
                 if (emailSent) {
-                    showQRCodeModal(pickupCode, email, true); // Confirmation modal
+                    showQRCodeModal(pickupCode, email, true);
                 } else {
-                    showQRCodeModal(pickupCode, email, false); // Backup modal
+                    showQRCodeModal(pickupCode, email, false);
                 }
             }
         }
@@ -484,8 +523,8 @@
                 bay.customerEmail = null;
                 bay.pickupCode = null;
             }
-            saveState(); // Auto-save state
-            showManageBaysScreen(); // Refresh the management screen
+            saveState();
+            showManageBaysScreen();
         }
 
         // --- CUSTOMER FLOW ---
@@ -496,15 +535,16 @@
                     <i class="fas fa-qrcode fa-5x"></i>
                     <p class="absolute mt-24 font-semibold">QR Scanner Placeholder</p>
                  </div>
-                 <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="ENTER CODE" autocapitalize="characters" inputmode="text">
+                 <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="ENTER CODE" autocapitalize="characters">
                  <button id="submit-pickup-code" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Submit Code</button>
             `;
             showModal('Pickup Package', content);
-            document.getElementById('pickup-code-input').focus();
+            
+            // --- Show Keyboard ---
+            const input = document.getElementById('pickup-code-input');
+            setupKeyboard(input);
+
             document.getElementById('submit-pickup-code').addEventListener('click', verifyCode);
-            document.getElementById('pickup-code-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') verifyCode();
-            });
         }
 
         function verifyCode() {
@@ -517,7 +557,7 @@
                 bay.occupied = false;
                 bay.customerEmail = null;
                 bay.pickupCode = null;
-                saveState(); // Auto-save state
+                saveState();
             } else {
                 const input = document.getElementById('pickup-code-input');
                 input.classList.add('border-red-500');
@@ -527,7 +567,103 @@
                 }, 4000);
             }
         }
+
+        // --- KEYBOARD HELPER FUNCTIONS ---
+        function setupKeyboard(inputElement) {
+            currentInput = inputElement;
+            document.getElementById('keyboard-container').style.display = 'block';
+
+            let commonKeyboardOptions = {
+                onChange: input => onInputChange(input),
+                onKeyPress: button => onKeyPress(button),
+                theme: "hg-theme-default",
+                mergeDisplay: true,
+                display: {
+                    '{shift}': 'Shift',
+                    '{enter}': 'Enter',
+                    '{backspace}': '⌫',
+                    '{space}': ' '
+                }
+            };
+            
+            let layout = (inputElement.type === 'email') ? 
+            {
+                'default': [
+                    'q w e r t y u i o p',
+                    'a s d f g h j k l',
+                    '{shift} z x c v b n m . @ {backspace}',
+                    '{space} {enter}'
+                ],
+                'shift': [
+                    'Q W E R T Y U I O P',
+                    'A S D F G H J K L',
+                    '{shift} Z X C V B N M _ - {backspace}',
+                    '{space} {enter}'
+                ]
+            } : 
+            {
+                'default': [
+                    '1 2 3 4 5 6 7 8 9 0',
+                    'q w e r t y u i o p',
+                    'a s d f g h j k l',
+                    '{shift} z x c v b n m {backspace}',
+                    '{space} {enter}'
+                ],
+                'shift': [
+                    '! @ # $ % ^ & * ( )',
+                    'Q W E R T Y U I O P',
+                    'A S D F G H J K L',
+                    '{shift} Z X C V B N M {backspace}',
+                    '{space} {enter}'
+                ]
+            };
+
+
+            keyboard = new Keyboard({
+                ...commonKeyboardOptions,
+                layout: layout
+            });
+        }
+
+        function onInputChange(input) {
+            currentInput.value = input;
+        }
+
+        function onKeyPress(button) {
+            if (button === "{shift}" || button === "{lock}") handleShift();
+            
+            if (button === "{enter}") {
+                if (currentInput.id === 'admin-password') verifyAdminPassword();
+                if (currentInput.id === 'pickup-code-input') verifyCode();
+                if (currentInput.id === 'customer-email') handleDeposit();
+                hideKeyboard();
+            }
+        }
+
+        function handleShift() {
+            let currentLayout = keyboard.options.layoutName;
+            let shiftToggle = currentLayout === "default" ? "shift" : "default";
+            keyboard.setOptions({ layoutName: shiftToggle });
+        }
+
+        function hideKeyboard() {
+            if (keyboard) {
+                keyboard.destroy();
+                document.getElementById('keyboard-container').style.display = 'none';
+                keyboard = null;
+            }
+        }
+        
+        // --- Intercept closeModal to hide the keyboard ---
+        // We need a clean way to do this. Let's redefine it.
+        const originalCloseModal = closeModal;
+        closeModal = function() {
+            hideKeyboard();
+            originalCloseModal.apply(this, arguments);
+        };
     </script>
+
+    <!-- Simple Keyboard JS -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
 </body>
 </html>
-
