@@ -34,7 +34,7 @@ function initialize() {
     
     // Inicializa EmailJS si las claves están presentes
     if (EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID) {
-        emailjs.init(EMAILJS_PUBLIC_KEY);
+        window.emailjs.init(EMAILJS_PUBLIC_KEY);
     }
 
     // Asigna los eventos a los botones principales
@@ -46,3 +46,4 @@ function initialize() {
 
 // Inicia la aplicación cuando el contenido del DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', initialize);
+
