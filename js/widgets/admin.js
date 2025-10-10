@@ -2,6 +2,7 @@
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
+import { attachKeyboardToInputs } from './keyboard.js';
 
 // --- CONFIGURACIÓN DE EMAILJS ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -17,8 +18,11 @@ export function showAdminLogin() {
         <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
     `;
-    showModal('Login de Admin', content);
-    document.getElementById('admin-password').focus();
+    showModal('Login de Admin', content, 0, () => {
+        document.getElementById('admin-password').focus();
+        attachKeyboardToInputs();
+    });
+    
     document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
     document.getElementById('admin-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') verifyAdminPassword();

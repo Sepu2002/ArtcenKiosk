@@ -4,6 +4,7 @@ import { loadState } from './utils/state.js';
 import { importFromCSV } from './utils/csv.js';
 import { showAdminLogin } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
+import { hideKeyboard } from './widgets/keyboard.js';
 
 // --- CONFIGURACIÓN ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -42,6 +43,13 @@ function initialize() {
     pickupPackageButton.addEventListener('click', showPickupScreen);
     themeToggleButton.addEventListener('click', toggleTheme);
     csvFileInput.addEventListener('change', importFromCSV);
+
+    // Oculta el teclado si se hace clic fuera de un input
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('input[type="text"], input[type="password"], input[type="email"]') && !e.target.closest('#keyboard-container')) {
+            hideKeyboard();
+        }
+    });
 }
 
 // Inicia la aplicación cuando el contenido del DOM esté completamente cargado.

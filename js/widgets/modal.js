@@ -46,3 +46,34 @@ export function closeModal() {
         modalBackdrop.addEventListener('transitionend', () => modalBackdrop.remove());
     }
 }
+
+// js/widgets/modal.js
+
+// ... (existing code) ...
+
+/**
+ * Muestra un modal con un título y contenido específico.
+ * @param {string} title - El título del modal.
+ * @param {string} content - El contenido HTML del modal.
+ * @param {number} [autoCloseDelay=0] - Tiempo en ms para autocerrar. 0 para no autocerrar.
+ * @param {Function} [onShow=null] - Callback a ejecutar después de mostrar el modal.
+ */
+export function showModal(title, content, autoCloseDelay = 0, onShow = null) {
+    closeModal(); // Cierra cualquier modal existente primero
+    // ... (existing code) ...
+
+    modalBackdrop.appendChild(modalContent);
+    modalContainer.appendChild(modalBackdrop);
+
+    // Activa la animación
+    setTimeout(() => {
+        modalBackdrop.classList.add('active');
+        if (onShow) {
+            onShow();
+        }
+    }, 10);
+
+    // ... (rest of the function) ...
+}
+
+// ... (existing code) ...
