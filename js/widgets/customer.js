@@ -1,6 +1,7 @@
 // Este archivo maneja la interfaz y lógica para el cliente.
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
+import { showKeyboard } from './keyboard.js';
 
 /**
  * Muestra la pantalla para que el cliente introduzca su código de recogida.
@@ -12,15 +13,15 @@ export function showPickupScreen() {
             <i class="fas fa-qrcode fa-5x"></i>
             <p class="absolute mt-24 font-semibold">Placeholder Escáner QR</p>
          </div>
-         <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" inputmode="text">
+         <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" readonly>
          <button id="submit-pickup-code" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Enviar Código</button>
     `;
     showModal('Recoger Paquete', content);
-    document.getElementById('pickup-code-input').focus();
+    
+    const pickupInput = document.getElementById('pickup-code-input');
+    pickupInput.addEventListener('focus', () => showKeyboard(pickupInput));
+
     document.getElementById('submit-pickup-code').addEventListener('click', verifyCode);
-    document.getElementById('pickup-code-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') verifyCode();
-    });
 }
 
 /**

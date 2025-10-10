@@ -2,6 +2,7 @@
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
+import { showKeyboard } from './keyboard.js';
 
 // --- CONFIGURACIÓN DE EMAILJS ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -14,15 +15,15 @@ const EMAILJS_TEMPLATE_ID = 'template_zwug2z7';
 export function showAdminLogin() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
-        <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
+        <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" readonly>
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
     `;
     showModal('Login de Admin', content);
-    document.getElementById('admin-password').focus();
+    
+    const passwordInput = document.getElementById('admin-password');
+    passwordInput.addEventListener('focus', () => showKeyboard(passwordInput));
+
     document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
-    document.getElementById('admin-password').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') verifyAdminPassword();
-    });
 }
 
 function verifyAdminPassword() {
@@ -101,11 +102,14 @@ function showDepositScreen() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible e introduce el correo del cliente.</p>
         <select id="bay-select" class="w-full p-3 border rounded-lg mb-4">${bayOptions}</select>
-        <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
+        <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" readonly>
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
     `;
     showModal('Depositar Paquete', content);
-    document.getElementById('customer-email').focus();
+    
+    const emailInput = document.getElementById('customer-email');
+    emailInput.addEventListener('focus', () => showKeyboard(emailInput));
+    
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 

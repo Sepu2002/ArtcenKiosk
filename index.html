@@ -14,8 +14,43 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <!-- Enlace a la hoja de estilos externa -->
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Simple Keyboard CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
+    <style>
+        /* Custom styles for the keyboard to better fit the theme */
+        #keyboard-container {
+            transition: transform 0.3s ease-in-out;
+        }
+        .simple-keyboard.myTheme1 {
+            background-color: #e5e7eb; /* Tailwind gray-200 */
+        }
+        html.dark .simple-keyboard.myTheme1 {
+            background-color: #1f2937; /* Tailwind gray-800 */
+        }
+        .simple-keyboard.myTheme1 .hg-button {
+            height: 4rem; /* 64px */
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            background-color: #ffffff; /* white */
+            color: #1f2937; /* gray-800 */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+            border-bottom-width: 3px;
+            border-color: #d1d5db; /* gray-300 */
+        }
+        html.dark .simple-keyboard.myTheme1 .hg-button {
+            background-color: #4b5563; /* gray-600 */
+            color: #f9fafb; /* gray-50 */
+            border-color: #374151; /* gray-700 */
+        }
+        .simple-keyboard.myTheme1 .hg-button:active {
+            background-color: #d1d5db; /* gray-300 */
+        }
+        html.dark .simple-keyboard.myTheme1 .hg-button:active {
+            background-color: #374151; /* gray-700 */
+        }
+    </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen transition-colors duration-300">
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen transition-colors duration-300 overflow-hidden">
 
     <div id="main-screen" class="w-full h-full p-6 flex flex-col items-center justify-center text-center bg-white dark:bg-gray-800 shadow-lg max-w-4xl max-h-[800px] rounded-2xl transition-colors duration-300">
         <button id="theme-toggle-button" class="absolute top-6 left-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 w-12 h-12 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center">
@@ -35,11 +70,15 @@
 
     <!-- El contenedor de modales sigue aquí para que los widgets puedan usarlo -->
     <div id="modal-container"></div>
+    <!-- Contenedor para el teclado virtual -->
+    <div id="keyboard-container" class="simple-keyboard hg-theme-default myTheme1 fixed bottom-0 left-0 right-0 z-50 transition-transform transform translate-y-full"></div>
     <input type="file" id="csv-file-input" class="hidden" accept=".csv">
 
     <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <!-- Simple Keyboard JS -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
     
     <!-- El punto de entrada de nuestra aplicación modular -->
     <script type="module" src="js/main.js"></script>
