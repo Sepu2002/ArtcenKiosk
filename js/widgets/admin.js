@@ -1,3 +1,5 @@
+// js/widgets/admin.js
+
 // Este archivo contiene toda la lógica y las pantallas para el administrador.
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
@@ -22,7 +24,7 @@ export function showAdminLogin() {
         document.getElementById('admin-password').focus();
         attachKeyboardToInputs();
     });
-    
+
     document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
     document.getElementById('admin-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') verifyAdminPassword();
@@ -108,8 +110,11 @@ function showDepositScreen() {
         <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
     `;
-    showModal('Depositar Paquete', content);
-    document.getElementById('customer-email').focus();
+    showModal('Depositar Paquete', content, 0, () => {
+        document.getElementById('customer-email').focus();
+        attachKeyboardToInputs();
+    });
+
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 

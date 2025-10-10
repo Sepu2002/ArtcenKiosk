@@ -1,3 +1,5 @@
+/* css/styles.css */
+
 /* Pega aquí todo el contenido de tu etiqueta <style> original. */
 body {
     font-family: 'Inter', sans-serif;
@@ -43,7 +45,6 @@ html.dark .modal-content {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
 }
-/* css/styles.css */
 
 /* On-screen Keyboard Styles */
 .keyboard-container {

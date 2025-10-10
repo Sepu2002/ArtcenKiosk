@@ -1,3 +1,5 @@
+// js/widgets/customer.js
+
 // Este archivo maneja la interfaz y lógica para el cliente.
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
@@ -16,11 +18,11 @@ export function showPickupScreen() {
          <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" inputmode="text">
          <button id="submit-pickup-code" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Enviar Código</button>
     `;
-     showModal('Recoger Paquete', content, 0, () => {
+    showModal('Recoger Paquete', content, 0, () => {
         document.getElementById('pickup-code-input').focus();
         attachKeyboardToInputs();
     });
-    
+
     document.getElementById('submit-pickup-code').addEventListener('click', verifyCode);
     document.getElementById('pickup-code-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') verifyCode();
