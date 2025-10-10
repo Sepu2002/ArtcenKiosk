@@ -21,17 +21,13 @@ export function showAdminLogin() {
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
     `;
     showModal('Login de Admin', content, 0, () => {
-        const passwordInput = document.getElementById('admin-password');
-        const submitButton = document.getElementById('admin-submit');
-        
-        // Attach listeners after the modal is shown
-        submitButton.addEventListener('click', verifyAdminPassword);
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') verifyAdminPassword();
-        });
-
-        passwordInput.focus();
+        document.getElementById('admin-password').focus();
         attachKeyboardToInputs();
+    });
+
+    document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
+    document.getElementById('admin-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') verifyAdminPassword();
     });
 }
 
@@ -115,12 +111,11 @@ function showDepositScreen() {
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
     `;
     showModal('Depositar Paquete', content, 0, () => {
-        // Attach listener after the modal is shown
-        document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
-        
         document.getElementById('customer-email').focus();
         attachKeyboardToInputs();
     });
+
+    document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 
 async function handleDeposit() {
