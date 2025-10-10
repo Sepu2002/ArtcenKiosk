@@ -16,7 +16,7 @@ export function showAdminLogin() {
     const content = `
         <form id="admin-login-form">
             <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
-            <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña">
+            <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="none">
             <button id="admin-submit" type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
         </form>
     `;
@@ -24,7 +24,9 @@ export function showAdminLogin() {
     
     const passwordInput = document.getElementById('admin-password');
     passwordInput.addEventListener('focus', () => showKeyboard(passwordInput));
-    passwordInput.focus();
+
+    // **CORRECCIÓN**: Retrasar el foco para asegurar que el modal es visible.
+    setTimeout(() => passwordInput.focus(), 100);
 
     document.getElementById('admin-login-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -110,7 +112,7 @@ function showDepositScreen() {
         <form id="deposit-form">
             <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible e introduce el correo del cliente.</p>
             <select id="bay-select" class="w-full p-3 border rounded-lg mb-4 dark:bg-gray-700 dark:text-white">${bayOptions}</select>
-            <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
+            <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="none">
             <button id="submit-deposit" type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
         </form>
     `;
@@ -118,7 +120,9 @@ function showDepositScreen() {
     
     const emailInput = document.getElementById('customer-email');
     emailInput.addEventListener('focus', () => showKeyboard(emailInput));
-    emailInput.focus();
+    
+    // **CORRECCIÓN**: Retrasar el foco para asegurar que el modal es visible.
+    setTimeout(() => emailInput.focus(), 100);
     
     document.getElementById('deposit-form').addEventListener('submit', (e) => {
         e.preventDefault();
