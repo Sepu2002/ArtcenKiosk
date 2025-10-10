@@ -1,5 +1,3 @@
-// js/widgets/modal.js
-
 // Un widget reutilizable para mostrar y ocultar modales.
 const modalContainer = document.getElementById('modal-container');
 
@@ -8,9 +6,8 @@ const modalContainer = document.getElementById('modal-container');
  * @param {string} title - El título del modal.
  * @param {string} content - El contenido HTML del modal.
  * @param {number} [autoCloseDelay=0] - Tiempo en ms para autocerrar. 0 para no autocerrar.
- * @param {Function} [onShow=null] - Callback a ejecutar después de mostrar el modal.
  */
-export function showModal(title, content, autoCloseDelay = 0, onShow = null) {
+export function showModal(title, content, autoCloseDelay = 0) {
     closeModal(); // Cierra cualquier modal existente primero
     const modalBackdrop = document.createElement('div');
     modalBackdrop.className = 'modal-backdrop';
@@ -27,12 +24,7 @@ export function showModal(title, content, autoCloseDelay = 0, onShow = null) {
     modalContainer.appendChild(modalBackdrop);
 
     // Activa la animación
-    setTimeout(() => {
-        modalBackdrop.classList.add('active');
-        if (onShow) {
-            onShow();
-        }
-    }, 10);
+    setTimeout(() => modalBackdrop.classList.add('active'), 10);
 
     if (autoCloseDelay > 0) {
         setTimeout(closeModal, autoCloseDelay);
@@ -54,3 +46,34 @@ export function closeModal() {
         modalBackdrop.addEventListener('transitionend', () => modalBackdrop.remove());
     }
 }
+
+// js/widgets/modal.js
+
+// ... (existing code) ...
+
+/**
+ * Muestra un modal con un título y contenido específico.
+ * @param {string} title - El título del modal.
+ * @param {string} content - El contenido HTML del modal.
+ * @param {number} [autoCloseDelay=0] - Tiempo en ms para autocerrar. 0 para no autocerrar.
+ * @param {Function} [onShow=null] - Callback a ejecutar después de mostrar el modal.
+ */
+export function showModal(title, content, autoCloseDelay = 0, onShow = null) {
+    closeModal(); // Cierra cualquier modal existente primero
+    // ... (existing code) ...
+
+    modalBackdrop.appendChild(modalContent);
+    modalContainer.appendChild(modalBackdrop);
+
+    // Activa la animación
+    setTimeout(() => {
+        modalBackdrop.classList.add('active');
+        if (onShow) {
+            onShow();
+        }
+    }, 10);
+
+    // ... (rest of the function) ...
+}
+
+// ... (existing code) ...

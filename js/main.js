@@ -1,5 +1,3 @@
-// js/main.js
-
 // Este es el archivo principal que une todo.
 // Importamos las funciones que necesitamos de otros módulos.
 import { loadState } from './utils/state.js';
@@ -56,3 +54,4 @@ function initialize() {
 
 // Inicia la aplicación cuando el contenido del DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', initialize);
+
