@@ -44,10 +44,8 @@ export function showKeyboard(inputElement) {
 
     keyboardContainer = document.createElement('div');
     keyboardContainer.id = 'keyboard-container';
-    // These classes position and style the keyboard.
-    keyboardContainer.className = 'simple-keyboard hg-theme-default myTheme1 fixed bottom-0 left-0 right-0 transition-transform transform translate-y-full';
-    // Set a high z-index directly to ensure it's on top of the modal (which is z-50).
-    keyboardContainer.style.zIndex = '100'; 
+    // These classes position and style the keyboard, including the z-index to be on top of modals.
+    keyboardContainer.className = 'simple-keyboard hg-theme-default myTheme1 fixed bottom-0 left-0 right-0 z-[60] transition-transform transform translate-y-full';
     document.body.appendChild(keyboardContainer);
 
     // Create a new keyboard instance
@@ -118,3 +116,4 @@ export function hideKeyboard() {
         }, 300); 
     }
 }
+
