@@ -2,6 +2,7 @@
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
+import { show as showKeyboard } from './keyboard.js';
 
 // --- CONFIGURACIÓN DE EMAILJS ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -13,17 +14,24 @@ const EMAILJS_TEMPLATE_ID = 'template_zwug2z7';
  */
 export function showAdminLogin() {
     const content = `
-        <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
-        <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
-        <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
+        <form id="admin-login-form">
+            <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
+            <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña">
+            <button id="admin-submit" type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
+        </form>
     `;
     showModal('Login de Admin', content);
-    document.getElementById('admin-password').focus();
-    document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
-    document.getElementById('admin-password').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') verifyAdminPassword();
+    
+    const passwordInput = document.getElementById('admin-password');
+    passwordInput.addEventListener('focus', () => showKeyboard(passwordInput));
+    passwordInput.focus();
+
+    document.getElementById('admin-login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        verifyAdminPassword();
     });
 }
+
 
 function verifyAdminPassword() {
     const password = document.getElementById('admin-password').value;
@@ -99,14 +107,23 @@ function showDepositScreen() {
 
     const bayOptions = availableBays.map(bay => `<option value="${bay.id}">Casillero ${bay.id}</option>`).join('');
     const content = `
-        <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible e introduce el correo del cliente.</p>
-        <select id="bay-select" class="w-full p-3 border rounded-lg mb-4">${bayOptions}</select>
-        <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
-        <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
+        <form id="deposit-form">
+            <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible e introduce el correo del cliente.</p>
+            <select id="bay-select" class="w-full p-3 border rounded-lg mb-4 dark:bg-gray-700 dark:text-white">${bayOptions}</select>
+            <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
+            <button id="submit-deposit" type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
+        </form>
     `;
     showModal('Depositar Paquete', content);
-    document.getElementById('customer-email').focus();
-    document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
+    
+    const emailInput = document.getElementById('customer-email');
+    emailInput.addEventListener('focus', () => showKeyboard(emailInput));
+    emailInput.focus();
+    
+    document.getElementById('deposit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleDeposit();
+    });
 }
 
 async function handleDeposit() {
@@ -114,7 +131,7 @@ async function handleDeposit() {
     const email = document.getElementById('customer-email').value;
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-        alert("Por favor, introduce una dirección de correo válida.");
+        showModal("Correo Inválido", "<p class='text-red-500'>Por favor, introduce una dirección de correo válida.</p>", 3000);
         return;
     }
 
