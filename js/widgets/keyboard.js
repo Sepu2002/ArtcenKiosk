@@ -1,6 +1,10 @@
 // js/widgets/keyboard.js
 
-let keyboardContainer = null; // Will be created upon initialization
+const keyboardContainer = document.createElement('div');
+keyboardContainer.id = 'keyboard-container';
+keyboardContainer.className = 'keyboard-container';
+document.body.appendChild(keyboardContainer);
+
 let targetInput = null;
 let isShiftActive = false;
 
@@ -11,20 +15,7 @@ const keyLayout = [
     ['close', 'space', 'enter']
 ];
 
-/**
- * Creates the keyboard element and appends it to the body.
- * Should only be called once.
- */
-export function initKeyboard() {
-    if (keyboardContainer) return; // Prevent multiple initializations
-    keyboardContainer = document.createElement('div');
-    keyboardContainer.id = 'keyboard-container';
-    keyboardContainer.className = 'keyboard-container';
-    document.body.appendChild(keyboardContainer);
-}
-
 function renderKeyboard() {
-    if (!keyboardContainer) return;
     keyboardContainer.innerHTML = '';
     const keyboard = document.createElement('div');
     keyboard.className = 'keyboard';
@@ -96,7 +87,7 @@ function renderKeyboard() {
 }
 
 export function showKeyboard(inputElement) {
-    if (!inputElement || !keyboardContainer) return;
+    if (!inputElement) return;
     targetInput = inputElement;
     isShiftActive = false;
     renderKeyboard();
@@ -104,7 +95,6 @@ export function showKeyboard(inputElement) {
 }
 
 export function hideKeyboard() {
-    if (!keyboardContainer) return;
     keyboardContainer.classList.remove('visible');
 }
 
