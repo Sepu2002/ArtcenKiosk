@@ -14,7 +14,7 @@ export function showPickupScreen() {
                 <i class="fas fa-qrcode fa-5x"></i>
                 <p class="absolute mt-24 font-semibold">Placeholder Escáner QR</p>
              </div>
-             <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters" inputmode="none">
+             <input type="text" id="pickup-code-input" class="w-full p-3 text-center tracking-widest font-mono border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="INTRODUCE EL CÓDIGO" autocapitalize="characters">
              <button id="submit-pickup-code" type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Enviar Código</button>
          </form>
     `;
@@ -22,9 +22,7 @@ export function showPickupScreen() {
     
     const codeInput = document.getElementById('pickup-code-input');
     codeInput.addEventListener('focus', () => showKeyboard(codeInput));
-    
-    // **CORRECCIÓN**: Retrasar el foco para asegurar que el modal es visible.
-    setTimeout(() => codeInput.focus(), 100);
+    codeInput.focus();
     
     document.getElementById('pickup-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -49,7 +47,7 @@ function verifyCode() {
     } else {
         const input = document.getElementById('pickup-code-input');
         input.classList.add('border-red-500');
-        showModal('Código Inválido', '<p class="text-red-500">El código que introdujiste no es válido o ya ha sido usado. Por favor, inténtalo de nuevo.</p>', 4000);
+        showModal('Código Inválido', '<p class="text-red-500">El código que introduciste no es válido o ya ha sido usado. Por favor, inténtalo de nuevo.</p>', 4000);
         setTimeout(() => {
             if (input) input.classList.remove('border-red-500');
         }, 4000);
