@@ -35,23 +35,20 @@ function onKeyPress(button) {
 }
 
 /**
- * Creates and shows the keyboard inside the currently active modal.
+ * Creates and shows the keyboard.
  * @param {HTMLInputElement} inputElement The input to attach the keyboard to.
  */
 export function showKeyboard(inputElement) {
-    if (keyboard) return; // Prevent creating multiple keyboards
+    // If a keyboard is already showing, do nothing.
+    if (keyboardContainer) return;
 
-    const keyboardHost = document.getElementById('keyboard-host');
-    if (!keyboardHost) {
-        console.error("Keyboard host not found inside the modal!");
-        return;
-    }
-    
-    // Create the container for the keyboard
     keyboardContainer = document.createElement('div');
     keyboardContainer.id = 'keyboard-container';
-    keyboardContainer.className = 'simple-keyboard hg-theme-default myTheme1 mt-4'; // Added margin-top for spacing
-    keyboardHost.appendChild(keyboardContainer);
+    // These classes position and style the keyboard.
+    keyboardContainer.className = 'simple-keyboard hg-theme-default myTheme1 fixed bottom-0 left-0 right-0 transition-transform transform translate-y-full';
+    // Set a high z-index directly to ensure it's on top of the modal (which is z-50).
+    keyboardContainer.style.zIndex = '100'; 
+    document.body.appendChild(keyboardContainer);
 
     // Create a new keyboard instance
     keyboard = new window.SimpleKeyboard.default(keyboardContainer, {
@@ -89,20 +86,35 @@ export function showKeyboard(inputElement) {
     
     currentInput = inputElement;
     keyboard.setInput(currentInput.value);
+
+    // Use a small timeout to ensure the element is in the DOM before starting the transition.
+    setTimeout(() => {
+        if (keyboardContainer) {
+            keyboardContainer.classList.remove('translate-y-full');
+        }
+    }, 10);
 }
 
 /**
- * Hides and destroys the keyboard instance.
+ * Hides and destroys the keyboard element and instance.
  */
 export function hideKeyboard() {
-    if (keyboard) {
-        keyboard.destroy();
-        keyboard = null;
-    }
     if (keyboardContainer) {
-        keyboardContainer.remove();
-        keyboardContainer = null;
-    }
-    currentInput = null;
-}
+        // Start the animation
+        keyboardContainer.classList.add('translate-y-full');
 
+        // Use a timeout that matches the CSS transition duration (300ms)
+        // This is more reliable than 'transitionend' if the element is removed abruptly.
+        setTimeout(() => {
+            if (keyboard) {
+                keyboard.destroy();
+                keyboard = null;
+            }
+            if (keyboardContainer) {
+                keyboardContainer.remove();
+                keyboardContainer = null;
+            }
+            currentInput = null;
+        }, 300); 
+    }
+}
