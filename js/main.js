@@ -6,7 +6,7 @@ import { loadState } from './utils/state.js';
 import { importFromCSV } from './utils/csv.js';
 import { showAdminLogin } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
-import { hideKeyboard } from './widgets/keyboard.js';
+import { hideKeyboard, initKeyboard } from './widgets/keyboard.js';
 
 // --- CONFIGURACIÓN ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -26,14 +26,15 @@ function toggleTheme() {
     if (htmlEl.classList.contains('dark')) {
         themeIcon.classList.replace('fa-moon', 'fa-sun');
     } else {
-        themeIcon.classList.replace('fa-sun', 'fa-moon');
+        themeIcon.classList.replace('fa-sun', 'moon');
     }
 }
 
 // --- INICIALIZACIÓN ---
 function initialize() {
-    // Carga el estado guardado al iniciar
-    loadState(); 
+    // Initialize all components first
+    initKeyboard();
+    loadState();
     
     // Inicializa EmailJS si las claves están presentes
     if (EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID) {
