@@ -1,5 +1,4 @@
 // Un widget reutilizable para mostrar y ocultar modales.
-import { hideKeyboard } from './keyboard.js';
 const modalContainer = document.getElementById('modal-container');
 
 /**
@@ -40,7 +39,6 @@ export function showModal(title, content, autoCloseDelay = 0) {
  * Cierra el modal activo.
  */
 export function closeModal() {
-    hideKeyboard(); // Oculta el teclado al cerrar un modal.
     const modalBackdrop = document.getElementById('modal-backdrop');
     if (modalBackdrop) {
         modalBackdrop.classList.remove('active');
