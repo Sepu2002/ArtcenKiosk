@@ -385,27 +385,37 @@ html.dark .scanner-placeholder {
     font-size: 1.3rem;
 }
 
+
 /* --- Ad Containers --- */
 .ad-container {
     position: fixed;
     top: 0;
     height: 100vh;
-    width: 50%; /* Ocupa la mitad del espacio lateral */
-    background-color: #d1d5db; /* gray-300 */
+    width: 50%;
+    background-color: #000; /* Fallback color */
+    overflow: hidden; /* Corta el iframe que se desborda */
 }
 
 #ad-left {
     left: 0;
-    /* Empuja el contenedor fuera de la vista hasta el borde del contenido principal */
     transform: translateX(calc(-100% + (100vw - 56rem) / 2));
 }
 
 #ad-right {
     right: 0;
-    /* Empuja el contenedor fuera de la vista hasta el borde del contenido principal */
     transform: translateX(calc(100% - (100vw - 56rem) / 2));
 }
 
-html.dark .ad-container {
-    background-color: #1f2937; /* gray-800 */
+/* Apunta al div del reproductor y al iframe que se genera dentro */
+.ad-container > div, .ad-container iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    pointer-events: none; /* Permite hacer clic "a través" del video */
 }
+
