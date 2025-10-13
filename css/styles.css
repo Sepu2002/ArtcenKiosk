@@ -3,7 +3,7 @@ body {
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
     background-color: #f3f4f6; /* gray-100 */
-    background-image: url("../images/wallpaper.jpg");
+    background-image: url("images/wallpaper.jpg");
     background-size: cover;
     background-position: center;
     display: flex;
@@ -42,7 +42,7 @@ html.dark body {
 html.dark .main-screen {
     /* --- MODIFICADO: Fondo oscuro semi-transparente --- */
     background-color: rgba(31, 41, 55, 0.8); /* gray-800 con transparencia */
-    
+
 }
 
 .main-title {
