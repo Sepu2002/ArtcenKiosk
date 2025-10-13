@@ -391,22 +391,21 @@ html.dark .scanner-placeholder {
     position: fixed;
     top: 0;
     height: 100vh;
-    width: 50%;
+    /* Calculates the width to fill the space beside the 56rem main content */
+    width: calc((100vw - 56rem) / 2);
     background-color: #000; /* Fallback color */
-    overflow: hidden; /* Corta el iframe que se desborda */
+    overflow: hidden;
 }
 
 #ad-left {
     left: 0;
-    transform: translateX(calc(-100% + (100vw - 56rem) / 2));
 }
 
 #ad-right {
     right: 0;
-    transform: translateX(calc(100% - (100vw - 56rem) / 2));
 }
 
-/* Apunta al div del reproductor y al iframe que se genera dentro */
+/* Styles the player div and the iframe generated inside it */
 .ad-container > div, .ad-container iframe {
     position: absolute;
     top: 50%;
@@ -416,6 +415,6 @@ html.dark .scanner-placeholder {
     min-height: 100%;
     width: auto;
     height: auto;
-    pointer-events: none; /* Permite hacer clic "a través" del video */
+    pointer-events: none; /* Allows clicks to go "through" the video */
 }
 
