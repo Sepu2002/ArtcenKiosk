@@ -17,7 +17,7 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
     modalBackdrop.id = 'modal-backdrop';
 
     if (inputSelector) {
-        content += '<div class="simple-keyboard mt-4"></div>';
+        content += '<div class="simple-keyboard"></div>';
     }
 
     const modalContent = document.createElement('div');
