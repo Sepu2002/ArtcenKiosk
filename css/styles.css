@@ -53,3 +53,10 @@ html.dark .modal-content {
     height: 55px; /* Altura de los botones */
     font-size: 1.3rem; /* Tamaño de la fuente de los botones */
 }
+
+.left-ad{
+    position: fixed;
+    align-items: left;
+    justify-content: left;
+    z-index: 1;
+}
