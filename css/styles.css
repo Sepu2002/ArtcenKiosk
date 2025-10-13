@@ -76,9 +76,3 @@ html.dark .modal-content {
     height: 100%;
     border: none; /* Elimina el borde por defecto del iframe */
 }
-
-/* Ajusta el contenido principal para que no quede detrás de los anuncios */
-#main-screen {
-    padding-left: 170px;  /* Espacio para el anuncio izquierdo + un margen */
-    padding-right: 170px; /* Espacio para el anuncio derecho + un margen */
-}
