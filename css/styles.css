@@ -7,7 +7,7 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
+    width: 200%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
     display: flex;
@@ -28,7 +28,7 @@ body {
     border-radius: 1rem;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 90%;
-    max-width: 800px;
+    max-width: 750px;
     transform: scale(0.95);
     transition: transform 0.3s ease;
 }
