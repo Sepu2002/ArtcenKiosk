@@ -35,7 +35,6 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
 
     if (inputSelector) {
         const Keyboard = window.SimpleKeyboard.default;
-        const isDarkMode = document.documentElement.classList.contains('dark');
 
         keyboard = new Keyboard({
             onChange: input => {
@@ -68,7 +67,7 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
                 '{space}': 'Espacio',
                 '{tab}': 'Tab'
             },
-            theme: `hg-theme-default ${isDarkMode ? 'hg-theme-dark' : ''}`,
+            theme: `hg-theme-default`, // <-- Cambio aquí
         });
 
         document.querySelector(inputSelector).addEventListener('input', event => {
@@ -106,16 +105,4 @@ function handleShift() {
     keyboard.setOptions({
         layoutName: capsLock ? "shift" : "default"
     });
-}
-
-/**
- * Actualiza el tema del teclado si existe.
- */
-export function updateKeyboardTheme() {
-    if (keyboard) {
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        keyboard.setOptions({
-            theme: `hg-theme-default ${isDarkMode ? 'hg-theme-dark' : ''}`
-        });
-    }
 }

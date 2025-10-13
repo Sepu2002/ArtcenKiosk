@@ -4,7 +4,6 @@ import { loadState } from './utils/state.js';
 import { importFromCSV } from './utils/csv.js';
 import { showAdminLogin } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
-import { updateKeyboardTheme } from './widgets/modal.js'; // <-- Importación añadida
 
 // --- CONFIGURACIÓN ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -27,7 +26,6 @@ function toggleTheme() {
     } else {
         themeIcon.classList.replace('fa-sun', 'fa-moon');
     }
-    updateKeyboardTheme(); // <-- Llamada a la función añadida
 }
 
 // --- INICIALIZACIÓN ---
