@@ -42,6 +42,7 @@ html.dark body {
 html.dark .main-screen {
     /* --- MODIFICADO: Fondo oscuro semi-transparente --- */
     background-color: rgba(31, 41, 55, 0.8); /* gray-800 con transparencia */
+    
 }
 
 .main-title {
