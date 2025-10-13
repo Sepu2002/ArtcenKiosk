@@ -384,7 +384,7 @@ html.dark .scanner-placeholder {
 
 /* --- Simple Keyboard Customization --- */
 .simple-keyboard {
-    padding-top: 5%;
+    margin-top: 10%;
     max-width: 100%;
 }
 
