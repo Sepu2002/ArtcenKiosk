@@ -111,7 +111,6 @@ html.dark .icon-button:hover {
 .top-left { top: 1.5rem; left: 1.5rem; }
 .top-right { top: 1.5rem; right: 1.5rem; }
 .bottom-right { bottom: 1.5rem; right: 1.5rem; }
-
 .admin-button {
     position: absolute;
     background-color: #e5e7eb;
