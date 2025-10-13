@@ -8,6 +8,7 @@ body {
     justify-content: center;
     height: 100vh;
     transition: background-color 0.3s;
+    overflow: hidden; /* Evita barras de scroll */
 }
 
 html.dark body {
@@ -30,6 +31,7 @@ html.dark body {
     max-height: 800px;
     border-radius: 1rem;
     transition: background-color 0.3s, color 0.3s;
+    z-index: 10; /* Asegura que el contenido principal esté sobre los anuncios */
 }
 
 html.dark .main-screen {
@@ -89,6 +91,7 @@ html.dark .subtitle {
     align-items: center;
     justify-content: center;
     transition: background-color 0.2s;
+    z-index: 20; /* Encima del contenido principal */
 }
 
 html.dark .icon-button {
@@ -111,6 +114,7 @@ html.dark .icon-button:hover {
 .top-left { top: 1.5rem; left: 1.5rem; }
 .top-right { top: 1.5rem; right: 1.5rem; }
 .bottom-right { bottom: 1.5rem; right: 1.5rem; }
+
 .admin-button {
     position: absolute;
     background-color: #e5e7eb;
@@ -118,6 +122,7 @@ html.dark .icon-button:hover {
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     transition: background-color 0.2s;
+    z-index: 20;
 }
 
 html.dark .admin-button {
@@ -378,4 +383,29 @@ html.dark .scanner-placeholder {
 .simple-keyboard .hg-button {
     height: 55px;
     font-size: 1.3rem;
+}
+
+/* --- Ad Containers --- */
+.ad-container {
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    width: 50%; /* Ocupa la mitad del espacio lateral */
+    background-color: #d1d5db; /* gray-300 */
+}
+
+#ad-left {
+    left: 0;
+    /* Empuja el contenedor fuera de la vista hasta el borde del contenido principal */
+    transform: translateX(calc(-100% + (100vw - 56rem) / 2));
+}
+
+#ad-right {
+    right: 0;
+    /* Empuja el contenedor fuera de la vista hasta el borde del contenido principal */
+    transform: translateX(calc(100% - (100vw - 56rem) / 2));
+}
+
+html.dark .ad-container {
+    background-color: #1f2937; /* gray-800 */
 }
