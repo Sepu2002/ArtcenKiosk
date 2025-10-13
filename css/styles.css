@@ -57,7 +57,7 @@ html.dark .modal-content {
 .ad-container {
     position: absolute;
     top: 0;
-    width: 150px; /* Ancho de la franja de anuncio */
+    width: 30%; /* Ancho de la franja de anuncio */
     height: 100%;
     background-color: #000;
     overflow: hidden;
