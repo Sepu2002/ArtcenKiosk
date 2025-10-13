@@ -14,6 +14,7 @@ const themeToggleButton = document.getElementById('theme-toggle-button');
 const adminLoginButton = document.getElementById('admin-login-button');
 const pickupPackageButton = document.getElementById('pickup-package-button');
 const csvFileInput = document.getElementById('csv-file-input');
+const refreshButton = document.getElementById('refresh-button'); // <-- Elemento añadido
 
 // --- MANEJO DEL TEMA ---
 function toggleTheme() {
@@ -42,8 +43,8 @@ function initialize() {
     pickupPackageButton.addEventListener('click', showPickupScreen);
     themeToggleButton.addEventListener('click', toggleTheme);
     csvFileInput.addEventListener('change', importFromCSV);
+    refreshButton.addEventListener('click', () => location.reload()); // <-- Evento añadido
 }
 
 // Inicia la aplicación cuando el contenido del DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', initialize);
-
