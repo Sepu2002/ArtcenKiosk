@@ -71,10 +71,10 @@ html.dark .modal-content {
     right: 0;
 }
 
-.ad-container video {
+.ad-container iframe {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Asegura que el video cubra el contenedor sin deformarse */
+    border: none; /* Elimina el borde por defecto del iframe */
 }
 
 /* Ajusta el contenido principal para que no quede detrás de los anuncios */
