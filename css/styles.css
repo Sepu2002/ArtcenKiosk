@@ -2,8 +2,10 @@
 body {
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
-    /*background-color: #f3f4f6; /* gray-100 */
-    background-image: url("images/wallpaper.jpg");
+    background-color: #f3f4f6; /* gray-100 */
+    background-image: url("../images/wallpaper.jpg");
+    background-size: cover;
+    background-position: center;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -26,7 +28,9 @@ html.dark body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    background-color: white;
+    /* --- MODIFICADO: Fondo semi-transparente --- */
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px); /* Efecto de desenfoque */
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     max-width: 56rem; /* max-w-4xl */
     max-height: 800px;
@@ -36,7 +40,8 @@ html.dark body {
 }
 
 html.dark .main-screen {
-    background-color: #1f2937; /* gray-800 */
+    /* --- MODIFICADO: Fondo oscuro semi-transparente --- */
+    background-color: rgba(31, 41, 55, 0.8); /* gray-800 con transparencia */
 }
 
 .main-title {
@@ -385,6 +390,4 @@ html.dark .scanner-placeholder {
     height: 55px;
     font-size: 1.3rem;
 }
-
-
 
