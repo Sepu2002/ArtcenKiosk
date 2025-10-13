@@ -3,7 +3,7 @@ body {
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
     background-color: #f3f4f6; /* gray-100 */
-    background-image: url("../images/wallpaper.jpg");
+    background-image: url("/ArtcenKiosk/images/wallpaper.jpg");
     background-size: cover;
     background-position: center;
     display: flex;
