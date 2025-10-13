@@ -55,7 +55,7 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
                     '~ ! @ # $ % ^ & * ( ) _ + {bksp}',
                     '{tab} Q W E R T Y U I O P { } |',
                     '{lock} A S D F G H J K L : " {enter}',
-                    '@gmail Z X C V B N M < > ? {shift}',
+                    '{shift} Z X C V B N M < > ? {shift}',
                     '.com @ {space}'
                 ]
             },
