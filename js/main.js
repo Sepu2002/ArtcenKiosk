@@ -4,6 +4,7 @@ import { loadState } from './utils/state.js';
 import { importFromCSV } from './utils/csv.js';
 import { showAdminLogin } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
+import { updateKeyboardTheme } from './widgets/modal.js'; // <-- Importación añadida
 
 // --- CONFIGURACIÓN ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -14,7 +15,7 @@ const themeToggleButton = document.getElementById('theme-toggle-button');
 const adminLoginButton = document.getElementById('admin-login-button');
 const pickupPackageButton = document.getElementById('pickup-package-button');
 const csvFileInput = document.getElementById('csv-file-input');
-const refreshButton = document.getElementById('refresh-button'); // <-- Elemento añadido
+const refreshButton = document.getElementById('refresh-button'); 
 
 // --- MANEJO DEL TEMA ---
 function toggleTheme() {
@@ -26,6 +27,7 @@ function toggleTheme() {
     } else {
         themeIcon.classList.replace('fa-sun', 'fa-moon');
     }
+    updateKeyboardTheme(); // <-- Llamada a la función añadida
 }
 
 // --- INICIALIZACIÓN ---
@@ -43,7 +45,7 @@ function initialize() {
     pickupPackageButton.addEventListener('click', showPickupScreen);
     themeToggleButton.addEventListener('click', toggleTheme);
     csvFileInput.addEventListener('change', importFromCSV);
-    refreshButton.addEventListener('click', () => location.reload()); // <-- Evento añadido
+    refreshButton.addEventListener('click', () => location.reload()); 
 }
 
 // Inicia la aplicación cuando el contenido del DOM esté completamente cargado.

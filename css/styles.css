@@ -28,7 +28,7 @@ body {
     border-radius: 1rem;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 90%;
-    max-width: 1000px;
+    max-width: 750px;
     transform: scale(0.95);
     transition: transform 0.3s ease;
 }
@@ -42,4 +42,14 @@ html.dark .modal-content {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
+}
+
+/* --- Estilos para agrandar el teclado --- */
+.simple-keyboard {
+    max-width: 100%;
+}
+
+.simple-keyboard .hg-button {
+    height: 55px; /* Altura de los botones */
+    font-size: 1.3rem; /* Tamaño de la fuente de los botones */
 }

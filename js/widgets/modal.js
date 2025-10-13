@@ -1,6 +1,7 @@
 // Un widget reutilizable para mostrar y ocultar modales.
 const modalContainer = document.getElementById('modal-container');
 let keyboard; // Mantener una referencia a la instancia del teclado
+let capsLock = false;
 
 /**
  * Muestra un modal con un título y contenido específico.
@@ -34,16 +35,40 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
 
     if (inputSelector) {
         const Keyboard = window.SimpleKeyboard.default;
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
         keyboard = new Keyboard({
             onChange: input => {
                 document.querySelector(inputSelector).value = input;
             },
             onKeyPress: button => {
-                /**
-                 * If you want to handle keys like {enter}, {shift}, {lock}, etc.
-                 * you can do it here.
-                 */
-            }
+                if (button === "{lock}") handleShift();
+            },
+            layout: {
+                'default': [
+                    '` 1 2 3 4 5 6 7 8 9 0 - = {bksp}',
+                    '{tab} q w e r t y u i o p [ ] \\',
+                    '{lock} a s d f g h j k l ; \' {enter}',
+                    '{shift} z x c v b n m , . / {shift}',
+                    '.com @ {space}'
+                ],
+                'shift': [
+                    '~ ! @ # $ % ^ & * ( ) _ + {bksp}',
+                    '{tab} Q W E R T Y U I O P { } |',
+                    '{lock} A S D F G H J K L : " {enter}',
+                    '{shift} Z X C V B N M < > ? {shift}',
+                    '.com @ {space}'
+                ]
+            },
+            display: {
+                '{lock}': 'Caps',
+                '{bksp}': 'Borrar',
+                '{enter}': 'Enter',
+                '{shift}': 'Shift',
+                '{space}': 'Espacio',
+                '{tab}': 'Tab'
+            },
+            theme: `hg-theme-default ${isDarkMode ? 'hg-theme-dark' : ''}`,
         });
 
         document.querySelector(inputSelector).addEventListener('input', event => {
@@ -67,11 +92,30 @@ export function closeModal() {
     if (keyboard) {
         keyboard.destroy();
         keyboard = null;
+        capsLock = false;
     }
     const modalBackdrop = document.getElementById('modal-backdrop');
     if (modalBackdrop) {
         modalBackdrop.classList.remove('active');
-        // Espera a que la transición termine para eliminar el elemento
         modalBackdrop.addEventListener('transitionend', () => modalBackdrop.remove());
+    }
+}
+
+function handleShift() {
+    capsLock = !capsLock;
+    keyboard.setOptions({
+        layoutName: capsLock ? "shift" : "default"
+    });
+}
+
+/**
+ * Actualiza el tema del teclado si existe.
+ */
+export function updateKeyboardTheme() {
+    if (keyboard) {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        keyboard.setOptions({
+            theme: `hg-theme-default ${isDarkMode ? 'hg-theme-dark' : ''}`
+        });
     }
 }
