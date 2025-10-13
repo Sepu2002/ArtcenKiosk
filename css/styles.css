@@ -386,35 +386,3 @@ html.dark .scanner-placeholder {
 }
 
 
-/* --- Ad Containers --- */
-.ad-container {
-    position: fixed;
-    top: 0;
-    height: 100vh;
-    /* Calculates the width to fill the space beside the 56rem main content */
-    width: calc((100vw - 56rem) / 2);
-    background-color: #000; /* Fallback color */
-    overflow: hidden;
-}
-
-#ad-left {
-    left: 0;
-}
-
-#ad-right {
-    right: 0;
-}
-
-/* Styles the player div and the iframe generated inside it */
-.ad-container > div, .ad-container iframe {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    pointer-events: none; /* Allows clicks to go "through" the video */
-}
-
