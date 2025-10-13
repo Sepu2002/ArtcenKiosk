@@ -1,4 +1,3 @@
-<!--Index principal -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13,8 +12,8 @@
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <!-- Enlace a la hoja de estilos externa -->
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen transition-colors duration-300">
 
@@ -34,15 +33,13 @@
         </button>
     </div>
 
-    <!-- El contenedor de modales sigue aquí para que los widgets puedan usarlo -->
     <div id="modal-container"></div>
     <input type="file" id="csv-file-input" class="hidden" accept=".csv">
 
-    <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.min.js"></script>
     
-    <!-- El punto de entrada de nuestra aplicación modular -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

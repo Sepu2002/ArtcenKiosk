@@ -17,7 +17,7 @@ export function showAdminLogin() {
         <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Iniciar Sesión</button>
     `;
-    showModal('Login de Admin', content);
+    showModal('Login de Admin', content, 0, '#admin-password'); // Añadido selector de input
     document.getElementById('admin-password').focus();
     document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
     document.getElementById('admin-password').addEventListener('keypress', (e) => {
@@ -104,7 +104,7 @@ function showDepositScreen() {
         <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg">Depositar y Enviar Código</button>
     `;
-    showModal('Depositar Paquete', content);
+    showModal('Depositar Paquete', content, 0, '#customer-email'); // Añadido selector de input
     document.getElementById('customer-email').focus();
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
