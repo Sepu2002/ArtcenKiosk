@@ -2,12 +2,13 @@
 body {
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
-    background-color: #f3f4f6; /* gray-100 */
+    /*background-color: #f3f4f6; /* gray-100 */
+    background-image: url("images/wallpaper.jpg");
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100vh;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s+/;
     overflow: hidden; /* Evita barras de scroll */
 }
 
@@ -384,5 +385,6 @@ html.dark .scanner-placeholder {
     height: 55px;
     font-size: 1.3rem;
 }
+
 
 
