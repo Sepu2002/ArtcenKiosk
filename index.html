@@ -13,24 +13,40 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
+    <link rel="stylesheet" href="css/ads.css"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen transition-colors duration-300">
 
-    <div id="main-screen" class="w-full h-full p-6 flex flex-col items-center justify-center text-center bg-white dark:bg-gray-800 shadow-lg max-w-4xl max-h-[800px] rounded-2xl transition-colors duration-300">
-        <button id="theme-toggle-button" class="absolute top-6 left-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 w-12 h-12 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center">
-            <i id="theme-icon" class="fas fa-moon text-xl"></i>
-        </button>
-        <button id="admin-login-button" class="absolute top-6 right-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-            <i class="fas fa-user-shield mr-2"></i>Admin
-        </button>
+    <div id="main-screen" class="w-full h-full p-6 flex flex-col items-center justify-center text-center bg-white dark:bg-gray-800 shadow-lg max-w-4xl max-h-[800px] rounded-2xl transition-colors duration-300 overflow-hidden relative">
+        <div class="ad-container left-ad">
+            <video autoplay loop muted playsinline>
+                <source src="videos/ad1.mp4" type="video/mp4">
+                Tu navegador no soporta el video.
+            </video>
+        </div>
 
-        <h1 class="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-4">Casillero de Paquetes</h1>
-        <p class="text-xl text-gray-500 dark:text-gray-400 mb-12">Recogida de paquetes simple, segura y autoservicio.</p>
-        <button id="pickup-package-button" class="bg-blue-600 text-white font-bold py-6 px-12 rounded-2xl text-2xl hover:bg-blue-700 transition transform hover:scale-105 shadow-xl">
-            <i class="fas fa-box-open mr-3"></i>
-            Recoger Mi Paquete
-        </button>
+        <div class="z-10">
+            <button id="theme-toggle-button" class="absolute top-6 left-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 w-12 h-12 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center">
+                <i id="theme-icon" class="fas fa-moon text-xl"></i>
+            </button>
+            <button id="admin-login-button" class="absolute top-6 right-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                <i class="fas fa-user-shield mr-2"></i>Admin
+            </button>
+
+            <h1 class="text-5xl font-bold text-gray-800 dark:text-gray-100 mb-4">Casillero de Paquetes</h1>
+            <p class="text-xl text-gray-500 dark:text-gray-400 mb-12">Recogida de paquetes simple, segura y autoservicio.</p>
+            <button id="pickup-package-button" class="bg-blue-600 text-white font-bold py-6 px-12 rounded-2xl text-2xl hover:bg-blue-700 transition transform hover:scale-105 shadow-xl">
+                <i class="fas fa-box-open mr-3"></i>
+                Recoger Mi Paquete
+            </button>
+        </div>
+
+        <div class="ad-container right-ad">
+            <video autoplay loop muted playsinline>
+                 <source src="videos/ad2.mp4" type="video/mp4">
+                Tu navegador no soporta el video.
+            </video>
+        </div>
     </div>
 
      <button id="refresh-button" class="absolute bottom-6 right-6 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 w-12 h-12 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition flex items-center justify-center shadow-lg">
@@ -43,7 +59,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.min.js"></script>
-    
+
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
