@@ -31,7 +31,6 @@ function verifyCode() {
     const bay = bays.find(b => b.pickupCode === code && b.occupied);
 
     if (bay) {
-        // --- MODIFICATION START ---
         showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Código aceptado. Abriendo Casillero ${bay.id}...</p>`, 0);
 
         fetch('http://127.0.0.1:5000/open-locker', {
