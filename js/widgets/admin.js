@@ -122,20 +122,42 @@ async function handleDeposit() {
     const bay = bays.find(b => b.id === selectedBayId);
     
     if (bay) {
-        bay.occupied = true;
-        bay.customerEmail = email;
-        bay.pickupCode = pickupCode;
-        saveState();
-
-        showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Abriendo Casillero ${selectedBayId}. Coloca el paquete dentro y cierra la puerta.</p>`, 0);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const emailSent = await sendEmailWithQRCode(email, pickupCode);
+        showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Enviando comando para abrir el Casillero ${selectedBayId}...</p>`, 0);
         
-        if (emailSent) {
-            showQRCodeModal(pickupCode, email, true);
-        } else {
-            showQRCodeModal(pickupCode, email, false);
+        try {
+            const response = await fetch('http://127.0.0.1:5000/open-locker', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ lockerId: selectedBayId }),
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Fallo en la comunicación con la controladora.');
+            }
+
+            // If the command was successful, proceed with the rest of the logic
+            bay.occupied = true;
+            bay.customerEmail = email;
+            bay.pickupCode = pickupCode;
+            saveState();
+
+            showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Casillero ${selectedBayId} abierto. Coloca el paquete dentro y cierra la puerta.</p>`, 0);
+            
+            const emailSent = await sendEmailWithQRCode(email, pickupCode);
+            
+            if (emailSent) {
+                showQRCodeModal(pickupCode, email, true);
+            } else {
+                showQRCodeModal(pickupCode, email, false);
+            }
+
+        } catch (error) {
+            console.error("Failed to open locker:", error);
+            showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Por favor, revisa la conexión con la controladora.</p>`, 5000);
         }
     }
 }

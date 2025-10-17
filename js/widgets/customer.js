@@ -25,17 +25,38 @@ export function showPickupScreen() {
 /**
  * Verifica el código de recogida introducido por el cliente.
  */
+
 function verifyCode() {
     const code = document.getElementById('pickup-code-input').value.trim().toUpperCase();
     const bay = bays.find(b => b.pickupCode === code && b.occupied);
 
     if (bay) {
-        closeModal();
-        showModal('¡Éxito!', `<p class="dark:text-gray-300">Código aceptado. Abriendo Casillero ${bay.id}.</p><p class="dark:text-gray-300">Por favor, recoge tu paquete y cierra la puerta.</p>`, 5000);
-        bay.occupied = false;
-        bay.customerEmail = null;
-        bay.pickupCode = null;
-        saveState(); // Guarda el estado actualizado
+        // --- MODIFICATION START ---
+        showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Código aceptado. Abriendo Casillero ${bay.id}...</p>`, 0);
+
+        fetch('http://127.0.0.1:5000/open-locker', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lockerId: bay.id }),
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeModal();
+                showModal('¡Éxito!', `<p class="dark:text-gray-300">Casillero ${bay.id} abierto.</p><p class="dark:text-gray-300">Por favor, recoge tu paquete y cierra la puerta.</p>`, 5000);
+                bay.occupied = false;
+                bay.customerEmail = null;
+                bay.pickupCode = null;
+                saveState(); // Guarda el estado actualizado
+            } else {
+                throw new Error(result.error || 'Fallo en la comunicación con la controladora.');
+            }
+        })
+        .catch(error => {
+            console.error("Failed to open locker:", error);
+            showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Por favor, contacta a soporte.</p>`, 5000);
+        });
+        // --- MODIFICATION END ---
     } else {
         const input = document.getElementById('pickup-code-input');
         input.classList.add('border-red-500');
