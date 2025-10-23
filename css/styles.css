@@ -175,7 +175,7 @@ html.dark .admin-button:hover {
     border-radius: 1rem;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 90%;
-    max-width: 750px;
+    max-width: 1000px;
     transform: scale(0.95);
     transition: transform 0.3s ease;
 }
