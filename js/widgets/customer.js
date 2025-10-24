@@ -56,7 +56,16 @@ function verifyCode() {
                     // --- ESTE CÓDIGO SOLO SE EJECUTA DESPUÉS DE QUE LA PUERTA SE CIERRA ---
                     console.log(`Puerta ${bay.id} cerrada después de la recogida.`);
 
-                    // 4. Ahora SÍ actualiza el estado del software y guarda
+                    // 4. ¡NUEVO! Envía el log al servidor
+                    fetch('http://127.0.0.1:5000/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            message: `PAQUETE RECOGIDO del casillero ${bay.id} (Código: ${bay.pickupCode})`
+                        })
+                    }).catch(err => console.error("Fallo al enviar log:", err));
+
+                    // 5. Ahora SÍ actualiza el estado del software y guarda
                     bay.occupied = false;
                     bay.customerEmail = null;
                     bay.pickupCode = null;
@@ -65,8 +74,6 @@ function verifyCode() {
                     
                     // Muestra un modal final de "gracias"
                     closeModal(); // Cierra el modal de "cierre la puerta"
-                    showModal('¡Gracias!', `<p class="dark:text-gray-300">Gracias por usar el servicio. Vuelve pronto.</p>`, 3000);
-                    // --- FIN DEL CALLBACK ---
                 });
                 
             } else {

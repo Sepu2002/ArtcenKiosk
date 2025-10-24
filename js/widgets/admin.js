@@ -189,7 +189,16 @@ async function handleDeposit() {
                 bay.pickupCode = pickupCode;
                 saveState();
 
-                // 5. Envía el correo
+                // 5. ¡NUEVO! Envía el log al servidor
+                fetch('http://127.0.0.1:5000/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: `PAQUETE DEPOSITADO en casillero ${selectedBayId} para ${email} (Código: ${pickupCode})`
+                    })
+                }).catch(err => console.error("Fallo al enviar log:", err));
+
+                // 6. Envía el correo
                 const emailSent = await sendEmailWithQRCode(email, pickupCode);
                 
                 if (emailSent) {
@@ -205,6 +214,9 @@ async function handleDeposit() {
             showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Revisa la conexión.</p>`, 5000);
         }
     }
+
+    
+    
 }
 
 
@@ -229,6 +241,7 @@ async function sendEmailWithQRCode(toEmail, pickupCode) {
         console.error('Falló al enviar el correo:', error);
         return false;
     }
+
 }
 
 function showQRCodeModal(pickupCode, email, isConfirmation = false) {
