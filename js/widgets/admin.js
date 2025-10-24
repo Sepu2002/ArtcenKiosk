@@ -2,6 +2,7 @@
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
+// Importamos el polling de mi respuesta anterior
 import { waitForDoorClose } from '../utils/hardware.js';
 
 // --- CONFIGURACIÓN DE EMAILJS ---
@@ -9,9 +10,7 @@ const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
 const EMAILJS_SERVICE_ID = 'service_gyjmvdw';
 const EMAILJS_TEMPLATE_ID = 'template_zwug2z7';
 
-/**
- * Muestra el modal de login para el administrador.
- */
+// ... (showAdminLogin y verifyAdminPassword sin cambios) ...
 export function showAdminLogin() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
@@ -39,6 +38,7 @@ function verifyAdminPassword() {
  * Muestra el panel de control del administrador.
  */
 export function showAdminPanel() {
+    // ... (Esta función no cambia, pero llamará a renderAdminBays que sí cambia) ...
     const content = `
         <div class="mb-6">
             <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Estado de los Casilleros</h3>
@@ -57,7 +57,7 @@ export function showAdminPanel() {
         </div>
     `;
     showModal('Panel de Administrador', content);
-    renderAdminBays();
+    renderAdminBays(); // Esta función ahora es más inteligente
 
     document.getElementById('deposit-package-btn').addEventListener('click', showDepositScreen);
     document.getElementById('manage-bays-btn').addEventListener('click', showManageBaysScreen);
@@ -65,24 +65,53 @@ export function showAdminPanel() {
     document.getElementById('import-csv-btn').addEventListener('click', () => document.getElementById('csv-file-input').click());
 }
 
+/**
+ * MODIFICADO: Muestra el estado físico real (Hardware)
+ */
 function renderAdminBays() {
     const baysContainer = document.getElementById('admin-bays-container');
     if (!baysContainer) return;
 
     baysContainer.innerHTML = bays.map(bay => {
-        const isOccupied = bay.occupied;
-        const statusColor = isOccupied ? 'red' : 'green';
+        let statusText, statusColor, details = '';
+
+        // Lógica de estado basada en tu aclaración
+        if (bay.hardwareStatus === "UNLOCKED") {
+            statusText = "PUERTA ABIERTA";
+            statusColor = "yellow"; // Estado de alerta, ni rojo ni verde
+        } else if (bay.hardwareStatus === "UNKNOWN") {
+            statusText = "DESCONOCIDO";
+            statusColor = "gray";
+        } else {
+            // El hardware está "LOCKED" (cerrado)
+            if (bay.occupied) {
+                statusText = "Ocupado";
+                statusColor = "red";
+                details = `
+                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Para: <span class="font-normal break-all">${bay.customerEmail}</span></p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Código: <span class="font-mono text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/50 px-2 py-1 rounded">${bay.pickupCode}</span></p>
+                `;
+            } else {
+                statusText = "Disponible";
+                statusColor = "green";
+                // Está cerrado y no ocupado (tu aclaración)
+                details = `<p class="text-sm text-gray-500 dark:text-gray-400">(Cerrado y listo)</p>`;
+            }
+        }
         
-        let details = isOccupied ? `
-            <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Para: <span class="font-normal break-all">${bay.customerEmail}</span></p>
-            <p class="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Código: <span class="font-mono text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/50 px-2 py-1 rounded">${bay.pickupCode}</span></p>
-        ` : '';
+        // Define las clases de color de Tailwind dinámicamente
+        const statusColors = {
+            red: "text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-900/50",
+            green: "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-900/50",
+            yellow: "text-yellow-600 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-900/50",
+            gray: "text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-900/50"
+        };
 
         return `
             <div class="border dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-700 shadow-sm">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Casillero ${bay.id}</h3>
-                    <span class="text-sm font-semibold text-${statusColor}-600 bg-${statusColor}-100 dark:text-${statusColor}-300 dark:bg-${statusColor}-900/50 px-3 py-1 rounded-full">${isOccupied ? 'Ocupado' : 'Disponible'}</span>
+                    <span class="text-sm font-semibold ${statusColors[statusColor]} px-3 py-1 rounded-full">${statusText}</span>
                 </div>
                 <div class="min-h-[40px]">${details}</div>
             </div>
@@ -90,26 +119,36 @@ function renderAdminBays() {
     }).join('');
 }
 
-
+/**
+ * MODIFICADO: Solo muestra casilleros disponibles (Cerrados y No Ocupados)
+ */
 function showDepositScreen() {
-    const availableBays = bays.filter(bay => !bay.occupied);
+    // ESTA ES LA LÓGICA CLAVE
+    // Un casillero "disponible" es uno que está CERRADO y NO OCUPADO
+    const availableBays = bays.filter(bay => 
+        bay.hardwareStatus === "LOCKED" && !bay.occupied
+    );
+
     if (availableBays.length === 0) {
-        showModal('No hay Casilleros Disponibles', '<p class="dark:text-gray-300">Todos los casilleros están actualmente ocupados.</p>', 3000);
+        showModal('No hay Casilleros Disponibles', '<p class="dark:text-gray-300">Todos los casilleros están ocupados o tienen la puerta abierta.</p>', 3000);
         return;
     }
 
     const bayOptions = availableBays.map(bay => `<option value="${bay.id}">Casillero ${bay.id}</option>`).join('');
     const content = `
-        <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible e introduce el correo del cliente.</p>
+        <p class="mb-4 text-gray-600 dark:text-gray-400">Selecciona un casillero disponible (cerrado y vacío) e introduce el correo del cliente.</p>
         <select id="bay-select" class="w-full p-3 border rounded-lg mb-4">${bayOptions}</select>
         <input type="email" id="customer-email" class="w-full p-3 border rounded-lg mb-4" placeholder="cliente@example.com" inputmode="email">
         <button id="submit-deposit" class="w-full bg-blue-600 text-white p-3 rounded-lg mb-4">Depositar y Enviar Código</button>
     `;
-    showModal('Depositar Paquete', content, 0, '#customer-email'); // Añadido selector de input
+    showModal('Depositar Paquete', content, 0, '#customer-email');
     document.getElementById('customer-email').focus();
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 
+/**
+ * MODIFICADO: Usa el polling de 'waitForDoorClose' (mi respuesta anterior)
+ */
 async function handleDeposit() {
     const selectedBayId = parseInt(document.getElementById('bay-select').value);
     const email = document.getElementById('customer-email').value;
@@ -133,27 +172,24 @@ async function handleDeposit() {
                 body: JSON.stringify({ lockerId: selectedBayId }),
             });
             const result = await response.json();
+            if (!result.success) throw new Error(result.error || 'Fallo en la comunicación');
 
-            if (!result.success) {
-                throw new Error(result.error || 'Fallo en la comunicación con la controladora.');
-            }
+            // 2. La puerta se abrió. Actualiza el estado del hardware localmente
+            bay.hardwareStatus = "UNLOCKED"; 
 
-            // 2. La puerta se abrió. Ahora, espera a que se cierre.
-            // NO actualices el estado todavía.
-            
-            // Llama a la función de sondeo y le pasa el resto de la lógica
-            // como un "callback" (una función que se ejecuta al final).
+            // 3. Llama a la función de sondeo (polling)
             waitForDoorClose(selectedBayId, async () => {
-                // --- ESTE CÓDIGO SOLO SE EJECUTA DESPUÉS DE QUE LA PUERTA SE CIERRA ---
+                // --- CÓDIGO EJECUTADO DESPUÉS DE CERRAR LA PUERTA ---
                 console.log(`Puerta ${selectedBayId} cerrada. Registrando el depósito.`);
                 
-                // 3. Ahora SÍ actualiza el estado y guarda
+                // 4. Actualiza AMBOS estados y guarda
+                bay.hardwareStatus = "LOCKED";
                 bay.occupied = true;
                 bay.customerEmail = email;
                 bay.pickupCode = pickupCode;
                 saveState();
 
-                // 4. Envía el correo
+                // 5. Envía el correo
                 const emailSent = await sendEmailWithQRCode(email, pickupCode);
                 
                 if (emailSent) {
@@ -166,11 +202,13 @@ async function handleDeposit() {
 
         } catch (error) {
             console.error("Failed to open locker:", error);
-            showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Por favor, revisa la conexión con la controladora.</p>`, 5000);
+            showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Revisa la conexión.</p>`, 5000);
         }
     }
 }
 
+
+// ... (sendEmailWithQRCode y showQRCodeModal sin cambios) ...
 async function sendEmailWithQRCode(toEmail, pickupCode) {
     if (!EMAILJS_PUBLIC_KEY) {
          console.warn("Claves de EmailJS no configuradas. Omitiendo envío de correo.");
@@ -215,19 +253,37 @@ function showQRCodeModal(pickupCode, email, isConfirmation = false) {
     });
 }
 
+
+// ... (showManageBaysScreen, confirmClearBay, handleClearBay sin cambios) ...
+// (Recuerda que estas funciones también deberían usar el polling,
+// pero la corrección que te di en la respuesta anterior ya funciona)
 function showManageBaysScreen() {
-    const baysContent = bays.map(bay => `
+    const baysContent = bays.map(bay => {
+        // Define estados basados en la nueva lógica
+        let statusText, statusColor;
+        if (bay.hardwareStatus === "UNLOCKED") {
+            statusText = "PUERTA ABIERTA";
+            statusColor = "text-yellow-600 bg-yellow-100";
+        } else if (bay.hardwareStatus === "LOCKED") {
+            statusText = bay.occupied ? "Ocupado" : "Disponible (Cerrado)";
+            statusColor = bay.occupied ? "text-red-600 bg-red-100" : "text-green-600 bg-green-100";
+        } else {
+            statusText = "Desconocido";
+            statusColor = "text-gray-600 bg-gray-100";
+        }
+
+        return `
         <div class="border dark:border-gray-600 rounded-lg p-4 flex flex-col justify-between">
             <div class="flex justify-between items-center mb-3">
                <h4 class="font-bold dark:text-gray-100">Casillero ${bay.id}</h4>
-               <span class="text-xs font-semibold ${bay.occupied ? 'text-red-600 bg-red-100' : 'text-green-600 bg-green-100'} px-2 py-1 rounded-full">${bay.occupied ? 'Ocupado' : 'Disponible'}</span>
+               <span class="text-xs font-semibold ${statusColor} px-2 py-1 rounded-full">${statusText}</span>
             </div>
             <div class="flex space-x-2">
                <button data-bay-id="${bay.id}" class="open-door-btn flex-1 bg-yellow-500 text-black p-2 rounded-lg text-sm">Abrir Puerta</button>
                ${bay.occupied ? `<button data-bay-id="${bay.id}" class="clear-bay-btn flex-1 bg-red-600 text-white p-2 rounded-lg text-sm">Liberar</button>` : ''}
             </div>
         </div>
-    `).join('');
+    `}).join('');
 
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Abre manualmente un casillero para mantenimiento o libera un casillero ocupado.</p>
@@ -235,32 +291,38 @@ function showManageBaysScreen() {
     `;
     showModal('Gestionar Casilleros', content);
 
-    // --- REPLACEMENT for .open-door-btn listener ---
-document.querySelectorAll('.open-door-btn').forEach(button => {
-    button.addEventListener('click', (e) => {
-        const bayId = e.currentTarget.dataset.bayId;
-        showModal('Abriendo...', `<p>Enviando comando para abrir el Casillero ${bayId}...</p>`, 0);
-
-        fetch('http://127.0.0.1:5000/open-locker', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lockerId: bayId })
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                showModal('Éxito', `<p>Casillero ${bayId} ha sido abierto.</p>`, 3000);
-            } else {
-                throw new Error(result.error || 'Fallo al abrir');
-            }
-        })
-        .catch(error => {
-            console.error("Failed to open locker:", error);
-            showModal('Error', `<p class.="text-red-500">No se pudo abrir el casillero: ${error.message}</p>`, 4000);
+    // Adjuntar el listener corregido
+    document.querySelectorAll('.open-door-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const bayId = e.currentTarget.dataset.bayId;
+            const bay = bays.find(b => b.id == bayId);
+            
+            showModal('Abriendo...', `<p>Enviando comando para abrir el Casillero ${bayId}...</p>`, 0);
+            
+            fetch('http://127.0.0.1:5000/open-locker', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lockerId: bayId })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showModal('Éxito', `<p>Casillero ${bayId} ha sido abierto.</p>`, 3000);
+                    // Actualiza el estado de hardware localmente
+                    if(bay) bay.hardwareStatus = "UNLOCKED";
+                    // Volvemos a renderizar la vista de gestión para mostrar "PUERTA ABIERTA"
+                    showManageBaysScreen();
+                } else {
+                    throw new Error(result.error || 'Fallo al abrir');
+                }
+            })
+            .catch(error => {
+                console.error("Failed to open locker:", error);
+                showModal('Error', `<p class="text-red-500">No se pudo abrir el casillero: ${error.message}</p>`, 4000);
+            });
         });
     });
-});
-
+    
     document.querySelectorAll('.clear-bay-btn').forEach(button => {
         button.addEventListener('click', (e) => confirmClearBay(parseInt(e.currentTarget.dataset.bayId)));
     });
@@ -283,6 +345,8 @@ function confirmClearBay(bayId) {
 function handleClearBay(bayId) {
     const bay = bays.find(b => b.id === bayId);
     if(bay) {
+        // Solo limpia el software. El estado del hardware se leerá
+        // la próxima vez que se cierre la puerta o se refresque.
         bay.occupied = false;
         bay.customerEmail = null;
         bay.pickupCode = null;

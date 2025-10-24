@@ -1,6 +1,8 @@
 // Este archivo maneja la interfaz y lógica para el cliente.
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
+// IMPORTAMOS LA NUEVA FUNCIÓN DE AVISO
+import { waitForDoorClose } from '../utils/hardware.js';
 
 /**
  * Muestra la pantalla para que el cliente introduzca su código de recogida.
@@ -41,12 +43,32 @@ function verifyCode() {
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                closeModal();
-                showModal('¡Éxito!', `<p class="dark:text-gray-300">Casillero ${bay.id} abierto.</p><p class="dark:text-gray-300">Por favor, recoge tu paquete y cierra la puerta.</p>`, 5000);
-                bay.occupied = false;
-                bay.customerEmail = null;
-                bay.pickupCode = null;
-                saveState(); // Guarda el estado actualizado
+                
+                // 1. La puerta se abrió.
+                // Actualiza el estado del hardware localmente
+                bay.hardwareStatus = "UNLOCKED";
+                
+                // 2. Muestra un aviso inicial
+                showModal('¡Éxito!', `<p class="dark:text-gray-300">Casillero ${bay.id} abierto.</p><p class="dark:text-gray-300">Por favor, recoge tu paquete y <strong>CIERRA LA PUERTA</strong>.</p>`, 0);
+                
+                // 3. Llama a la función de AVISO Y SONDEO
+                waitForDoorClose(bay.id, () => {
+                    // --- ESTE CÓDIGO SOLO SE EJECUTA DESPUÉS DE QUE LA PUERTA SE CIERRA ---
+                    console.log(`Puerta ${bay.id} cerrada después de la recogida.`);
+
+                    // 4. Ahora SÍ actualiza el estado del software y guarda
+                    bay.occupied = false;
+                    bay.customerEmail = null;
+                    bay.pickupCode = null;
+                    bay.hardwareStatus = "LOCKED";
+                    saveState();
+                    
+                    // Muestra un modal final de "gracias"
+                    closeModal(); // Cierra el modal de "cierre la puerta"
+                    showModal('¡Gracias!', `<p class="dark:text-gray-300">Gracias por usar el servicio. Vuelve pronto.</p>`, 3000);
+                    // --- FIN DEL CALLBACK ---
+                });
+                
             } else {
                 throw new Error(result.error || 'Fallo en la comunicación con la controladora.');
             }

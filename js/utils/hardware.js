@@ -40,7 +40,7 @@ export function waitForDoorClose(bayId, onClosedCallback) {
                 console.log(`Casillero ${bayId} confirmado como CERRADO.`);
                 clearInterval(poller); // Detiene el sondeo
                 closeModal(); // Cierra el modal de "espere"
-                onClosedCallback(); // Ejecuta la acción final
+                onClosedCallback(); // Ejecuta la acción final (marcar como disponible)
             }
             // Si es "UNLOCKED", no hace nada y espera al próximo sondeo
             
