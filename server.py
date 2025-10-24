@@ -40,18 +40,23 @@ def _send_serial_command(command):
     """Internal function to send a command and return the raw response."""
     print(f"Sending Command:   {command.hex(' ')}")
     try:
+        # Usamos un timeout más corto para la escritura, 
+        # pero el timeout de lectura sigue siendo 1.0
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1.0) as ser:
             ser.flushInput()
             ser.flushOutput()
             ser.write(command)
-            time.sleep(0.1)
-            response = ser.read(RESPONSE_LENGTH)
+            time.sleep(0.1) # Damos tiempo al adaptador
+            
+            # Leemos cualquier cosa que la placa envíe para limpiar el buffer
+            response = ser.read(RESPONSE_LENGTH * 2) # Lee hasta 22 bytes
             
             if not response:
-                print("Received Response: ...No response from board.")
-                return None
+                print("Received Response: ...No response from board (this is OK for 'open').")
+                # Para 'open', no tener respuesta puede ser normal
+                return b'' # Retorna bytes vacíos en lugar de None
             
-            print(f"Received Response: {response.hex(' ')}")
+            print(f"Received Response(s): {response.hex(' ')}")
             return response
             
     except serial.SerialException as e:
@@ -71,9 +76,13 @@ def _get_lock_status(locker_id):
     
     status_dict = {"channel": locker_id, "status": "UNKNOWN"}
 
-    if response:
+    if response is not None:
         try:
-            # Check if response is a valid status packet
+            # Busca el paquete de respuesta de status (0x83)
+            # A veces la respuesta 0x85 (no solicitada) puede colarse.
+            # Necesitamos encontrar la respuesta 0x83.
+            
+            # Simple check: Asumimos que la respuesta 0x83 es la primera.
             if (response[0:4] == HEADER and
                 response[6] == CMD_BYTE_CHECK[0] and
                 response[8] == locker_id):
@@ -83,6 +92,9 @@ def _get_lock_status(locker_id):
                     status_dict["status"] = "LOCKED"
                 elif state_byte == 0x00:
                     status_dict["status"] = "UNLOCKED"
+            else:
+                 print(f"Info: Received non-check packet (e.g., 0x85) while checking status.")
+
         except IndexError:
             pass  # Status remains "UNKNOWN"
             
@@ -106,22 +118,22 @@ def handle_open_locker():
     print(f"\n--- Request received for Locker {locker_num} ---")
     command = build_command(CMD_BYTE_OPEN, locker_num)
     
-    ack_payload = (BOARD_ADDR + CMD_BYTE_OPEN + CMD_OK_RESPONSE + 
-                   bytes([locker_num]) + b'\x00')
-    expected_ack = (HEADER + b'\x0B' + ack_payload + 
-                    calculate_checksum(ack_payload))
+    # --- MODIFICACIÓN (FIRE AND FORGET) ---
+    # Ya no comprobamos la respuesta "ACK" porque la placa envía múltiples
+    # mensajes (ACK y estado 0x85) que confunden a nuestro lector.
+    # Simplemente enviamos el comando. La lógica de sondeo (polling)
+    # en el frontend (waitForDoorClose) se encargará de verificar.
+    
+    response = _send_serial_command(command) 
 
-    response = _send_serial_command(command)
-
-    if response == expected_ack:
-        print(f"Success: Locker {locker_num} acknowledged open.")
-        return jsonify({"success": True, "message": f"Locker {locker_num} opened."})
-    elif response is None:
-        print("Failure: No response from controller.")
-        return jsonify({"success": False, "error": "No response from controller."}), 500
+    # Asumimos que funcionó si el puerto no dio un error (response is not None)
+    if response is not None:
+        print(f"Success: 'Open' command sent for locker {locker_num}.")
+        return jsonify({"success": True, "message": f"Locker {locker_num} command sent."})
     else:
-        print("Failure: Received an unexpected response.")
-        return jsonify({"success": False, "error": "Unexpected response from controller."}), 500
+        # Esto solo falla si el puerto serial falló
+        print("Failure: Serial port error.")
+        return jsonify({"success": False, "error": "Failed to communicate with controller."}), 500
 
 @app.route('/check-status/<int:locker_id>', methods=['GET'])
 def handle_check_status(locker_id):
@@ -132,7 +144,10 @@ def handle_check_status(locker_id):
     status_dict = _get_lock_status(locker_id)
     
     if status_dict["status"] == "UNKNOWN":
-        return jsonify({"success": False, "error": "No response from controller."}), 500
+        # ¡Importante! No devuelvas un error 500.
+        # Simplemente di que el estado es desconocido. El JS
+        # lo interpretará y volverá a intentarlo.
+        return jsonify({"success": True, "status": "UNKNOWN", "channel": locker_id})
     
     return jsonify({"success": True, "status": status_dict["status"], "channel": locker_id})
 
@@ -151,6 +166,6 @@ def handle_check_all_statuses():
 
 # --- Start the Server ---
 if __name__ == '__main__':
-    print("--- Starting Kiosk Lock Server (v2 - Synced) ---")
+    print("--- Starting Kiosk Lock Server (v3 - Open Fix) ---")
     print("Listening on http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)
