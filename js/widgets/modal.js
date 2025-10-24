@@ -87,6 +87,7 @@ export function showModal(title, content, autoCloseDelay = 0, inputSelector = nu
 /**
  * Cierra el modal activo.
  */
+// CÓDIGO NUEVO (CORREGIDO)
 export function closeModal() {
     if (keyboard) {
         keyboard.destroy();
@@ -95,8 +96,7 @@ export function closeModal() {
     }
     const modalBackdrop = document.getElementById('modal-backdrop');
     if (modalBackdrop) {
-        modalBackdrop.classList.remove('active');
-        modalBackdrop.addEventListener('transitionend', () => modalBackdrop.remove());
+        modalBackdrop.remove();
     }
 }
 
