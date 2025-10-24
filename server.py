@@ -1,73 +1,156 @@
+# Save this as server.py
 import serial
 import time
+import functools
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-# --- Configuration ---
-SERIAL_PORT = '/dev/ttyUSB0'  # This is correct from your dmesg
-BAUD_RATE = 9600  # Default baud rate for YCSB08M
-BOARD_ADDRESS = 0x01  # Assuming the board is at address 1 (check DIP switches!)
+# --- Protocol Configuration (Confirmed) ---
+HEADER = b'\x57\x4B\x4C\x59'  # "WKLY"
+BOARD_ADDR = b'\x01'
+CMD_BYTE_OPEN = b'\x82'
+CMD_BYTE_CHECK = b'\x83'
+CMD_OK_RESPONSE = b'\x00'
 
+# --- Serial Port Configuration ---
+SERIAL_PORT = '/dev/ttyUSB0'
+BAUD_RATE = 9600
+RESPONSE_LENGTH = 11
+
+# --- Flask App Setup ---
 app = Flask(__name__)
+CORS(app)  # Enable Cross-Origin Resource Sharing
 
-# --- Serial Communication Helper ---
-def send_command(command):
-    """Sends a command to the serial port and returns the response."""
+# --- Protocol Helper Functions ---
+
+def calculate_checksum(payload):
+    checksum = functools.reduce(lambda a, b: a ^ b, payload)
+    return bytes([checksum])
+
+def build_command(cmd_byte, channel, data_bytes=b''):
+    channel_byte = bytes([channel])
+    payload = BOARD_ADDR + cmd_byte + channel_byte + data_bytes
+    length = 4 + 1 + len(payload) + 1
+    length_byte = bytes([length])
+    checksum = calculate_checksum(payload)
+    packet = HEADER + length_byte + payload + checksum
+    return packet
+
+def _send_serial_command(command):
+    """Internal function to send a command and return the raw response."""
+    print(f"Sending Command:   {command.hex(' ')}")
     try:
-        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1.2) as ser:
+        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1.0) as ser:
+            ser.flushInput()
+            ser.flushOutput()
             ser.write(command)
-            # Wait for the lock to react and send a response
-            time.sleep(1) 
-            response = ser.read(10) # Read up to 10 bytes
+            time.sleep(0.1)
+            response = ser.read(RESPONSE_LENGTH)
+            
+            if not response:
+                print("Received Response: ...No response from board.")
+                return None
+            
+            print(f"Received Response: {response.hex(' ')}")
             return response
+            
     except serial.SerialException as e:
-        print(f"Error communicating with serial port: {e}")
+        print(f"SERIAL ERROR: {e}")
+        return None
+    except Exception as e:
+        print(f"GENERAL ERROR: {e}")
         return None
 
-# --- Command Generation (From your PDF) ---
-def create_open_command(cabinet_number):
-    """Creates the byte command to open a specific cabinet."""
-    byte0 = 0x8A  # Frame header
-    byte1 = BOARD_ADDRESS
-    byte2 = int(cabinet_number)
-    byte3 = 0x11  # Open cabinet command
+def _get_lock_status(locker_id):
+    """
+    Internal function to check a single lock's status.
+    Returns a dictionary: {"channel": id, "status": "LOCKED" | "UNLOCKED" | "UNKNOWN"}
+    """
+    command = build_command(CMD_BYTE_CHECK, locker_id)
+    response = _send_serial_command(command)
     
-    # Checksum is the XOR of all previous bytes
-    checksum = byte0 ^ byte1 ^ byte2 ^ byte3
-    
-    return bytes([byte0, byte1, byte2, byte3, checksum])
-
-# --- API Endpoints ---
-@app.route('/open-locker', methods=['POST'])
-def open_locker():
-    data = request.get_json()
-    locker_id = data.get('lockerId')
-
-    if not locker_id:
-        return jsonify({"success": False, "error": "Missing lockerId"}), 400
-    
-    # --- THIS IS THE ONLY CHANGE ---
-    # Validate that the locker ID is between 1 and 8
-    try:
-        locker_num = int(locker_id)
-        if not 1 <= locker_num <= 8:
-            raise ValueError
-    except ValueError:
-        return jsonify({"success": False, "error": f"Invalid lockerId: {locker_id}. Must be 1-8."}), 400
-    # --- END OF CHANGE ---
-
-    print(f"Received request to open locker: {locker_num}")
-    command_to_send = create_open_command(locker_num)
-    
-    print(f"Sending command: {' '.join(f'0x{b:02X}' for b in command_to_send)}")
-    
-    response = send_command(command_to_send)
+    status_dict = {"channel": locker_id, "status": "UNKNOWN"}
 
     if response:
-        print(f"Received response: {' '.join(f'0x{r:02X}' for r in response)}")
-        # You can add response checking here
-        return jsonify({"success": True, "message": f"Locker {locker_num} opened."})
-    else:
-        return jsonify({"success": False, "error": "Failed to communicate with controller."}), 500
+        try:
+            # Check if response is a valid status packet
+            if (response[0:4] == HEADER and
+                response[6] == CMD_BYTE_CHECK[0] and
+                response[8] == locker_id):
+                
+                state_byte = response[9]
+                if state_byte == 0x01:
+                    status_dict["status"] = "LOCKED"
+                elif state_byte == 0x00:
+                    status_dict["status"] = "UNLOCKED"
+        except IndexError:
+            pass  # Status remains "UNKNOWN"
+            
+    return status_dict
 
+# --- Web Server API Endpoints ---
+
+@app.route('/open-locker', methods=['POST'])
+def handle_open_locker():
+    data = request.get_json()
+    if not data or 'lockerId' not in data:
+        return jsonify({"success": False, "error": "Missing lockerId"}), 400
+
+    try:
+        locker_num = int(data['lockerId'])
+        if not 1 <= locker_num <= 8:
+            return jsonify({"success": False, "error": "Invalid lockerId. Must be 1-8."}), 400
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid lockerId. Must be a number."}), 400
+
+    print(f"\n--- Request received for Locker {locker_num} ---")
+    command = build_command(CMD_BYTE_OPEN, locker_num)
+    
+    ack_payload = (BOARD_ADDR + CMD_BYTE_OPEN + CMD_OK_RESPONSE + 
+                   bytes([locker_num]) + b'\x00')
+    expected_ack = (HEADER + b'\x0B' + ack_payload + 
+                    calculate_checksum(ack_payload))
+
+    response = _send_serial_command(command)
+
+    if response == expected_ack:
+        print(f"Success: Locker {locker_num} acknowledged open.")
+        return jsonify({"success": True, "message": f"Locker {locker_num} opened."})
+    elif response is None:
+        print("Failure: No response from controller.")
+        return jsonify({"success": False, "error": "No response from controller."}), 500
+    else:
+        print("Failure: Received an unexpected response.")
+        return jsonify({"success": False, "error": "Unexpected response from controller."}), 500
+
+@app.route('/check-status/<int:locker_id>', methods=['GET'])
+def handle_check_status(locker_id):
+    """Endpoint for checking a single lock (used for polling)."""
+    if not 1 <= locker_id <= 8:
+        return jsonify({"success": False, "error": "Invalid lockerId. Must be 1-8."}), 400
+    
+    status_dict = _get_lock_status(locker_id)
+    
+    if status_dict["status"] == "UNKNOWN":
+        return jsonify({"success": False, "error": "No response from controller."}), 500
+    
+    return jsonify({"success": True, "status": status_dict["status"], "channel": locker_id})
+
+@app.route('/check-all-statuses', methods=['GET'])
+def handle_check_all_statuses():
+    """
+    NEW ENDPOINT: Checks all 8 locks and returns their hardware status.
+    This is used on startup to fix desynchronization.
+    """
+    print("\n--- Request received for ALL STATUSES ---")
+    all_statuses = []
+    for i in range(1, 9):  # Check channels 1 through 8
+        all_statuses.append(_get_lock_status(i))
+    
+    return jsonify({"success": True, "bays": all_statuses})
+
+# --- Start the Server ---
 if __name__ == '__main__':
+    print("--- Starting Kiosk Lock Server (v2 - Synced) ---")
+    print("Listening on http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)

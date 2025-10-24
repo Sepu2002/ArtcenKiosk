@@ -2,6 +2,7 @@
 import { showModal, closeModal } from './modal.js';
 import { bays, saveState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
+import { waitForDoorClose } from '../utils/hardware.js';
 
 // --- CONFIGURACIÓN DE EMAILJS ---
 const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
@@ -125,35 +126,43 @@ async function handleDeposit() {
         showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Enviando comando para abrir el Casillero ${selectedBayId}...</p>`, 0);
         
         try {
+            // 1. Enviar comando de apertura
             const response = await fetch('http://127.0.0.1:5000/open-locker', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ lockerId: selectedBayId }),
             });
-
             const result = await response.json();
 
             if (!result.success) {
                 throw new Error(result.error || 'Fallo en la comunicación con la controladora.');
             }
 
-            // If the command was successful, proceed with the rest of the logic
-            bay.occupied = true;
-            bay.customerEmail = email;
-            bay.pickupCode = pickupCode;
-            saveState();
+            // 2. La puerta se abrió. Ahora, espera a que se cierre.
+            // NO actualices el estado todavía.
+            
+            // Llama a la función de sondeo y le pasa el resto de la lógica
+            // como un "callback" (una función que se ejecuta al final).
+            waitForDoorClose(selectedBayId, async () => {
+                // --- ESTE CÓDIGO SOLO SE EJECUTA DESPUÉS DE QUE LA PUERTA SE CIERRA ---
+                console.log(`Puerta ${selectedBayId} cerrada. Registrando el depósito.`);
+                
+                // 3. Ahora SÍ actualiza el estado y guarda
+                bay.occupied = true;
+                bay.customerEmail = email;
+                bay.pickupCode = pickupCode;
+                saveState();
 
-            showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Casillero ${selectedBayId} abierto. Coloca el paquete dentro y cierra la puerta.</p>`, 0);
-            
-            const emailSent = await sendEmailWithQRCode(email, pickupCode);
-            
-            if (emailSent) {
-                showQRCodeModal(pickupCode, email, true);
-            } else {
-                showQRCodeModal(pickupCode, email, false);
-            }
+                // 4. Envía el correo
+                const emailSent = await sendEmailWithQRCode(email, pickupCode);
+                
+                if (emailSent) {
+                    showQRCodeModal(pickupCode, email, true);
+                } else {
+                    showQRCodeModal(pickupCode, email, false);
+                }
+                // --- FIN DEL CALLBACK ---
+            });
 
         } catch (error) {
             console.error("Failed to open locker:", error);
@@ -226,9 +235,32 @@ function showManageBaysScreen() {
     `;
     showModal('Gestionar Casilleros', content);
 
-    document.querySelectorAll('.open-door-btn').forEach(button => {
-        button.addEventListener('click', (e) => showModal('Éxito', `<p>Casillero ${e.currentTarget.dataset.bayId} ha sido abierto.</p>`, 3000));
+    // --- REPLACEMENT for .open-door-btn listener ---
+document.querySelectorAll('.open-door-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+        const bayId = e.currentTarget.dataset.bayId;
+        showModal('Abriendo...', `<p>Enviando comando para abrir el Casillero ${bayId}...</p>`, 0);
+
+        fetch('http://127.0.0.1:5000/open-locker', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lockerId: bayId })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showModal('Éxito', `<p>Casillero ${bayId} ha sido abierto.</p>`, 3000);
+            } else {
+                throw new Error(result.error || 'Fallo al abrir');
+            }
+        })
+        .catch(error => {
+            console.error("Failed to open locker:", error);
+            showModal('Error', `<p class.="text-red-500">No se pudo abrir el casillero: ${error.message}</p>`, 4000);
+        });
     });
+});
+
     document.querySelectorAll('.clear-bay-btn').forEach(button => {
         button.addEventListener('click', (e) => confirmClearBay(parseInt(e.currentTarget.dataset.bayId)));
     });

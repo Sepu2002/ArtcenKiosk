@@ -1,6 +1,5 @@
 // Este es el archivo principal que une todo.
-// Importamos las funciones que necesitamos de otros módulos.
-import { loadState } from './utils/state.js';
+import { initializeState } from './utils/state.js'; // CAMBIADO
 import { importFromCSV } from './utils/csv.js';
 import { showAdminLogin } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
@@ -18,6 +17,7 @@ const refreshButton = document.getElementById('refresh-button');
 
 // --- MANEJO DEL TEMA ---
 function toggleTheme() {
+    // ... (sin cambios)
     const htmlEl = document.documentElement;
     htmlEl.classList.toggle('dark');
     const themeIcon = document.getElementById('theme-icon');
@@ -28,10 +28,15 @@ function toggleTheme() {
     }
 }
 
-// --- INICIALIZACIÓN ---
-function initialize() {
-    // Carga el estado guardado al iniciar
-    loadState(); 
+// --- INICIALIZACIÓN (MODIFICADA) ---
+async function initialize() {
+    // Muestra un modal de carga mientras se sincroniza el hardware
+    // (Necesitaríamos importar 'showModal' y 'closeModal' aquí)
+    
+    // Carga el estado sincronizado al iniciar
+    await initializeState(); // CAMBIADO
+    
+    // Cierra el modal de carga
     
     // Inicializa EmailJS si las claves están presentes
     if (EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID) {
@@ -46,6 +51,5 @@ function initialize() {
     refreshButton.addEventListener('click', () => location.reload()); 
 }
 
-// Inicia la aplicación cuando el contenido del DOM esté completamente cargado.
+// Inicia la aplicación
 document.addEventListener('DOMContentLoaded', initialize);
-
