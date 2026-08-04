@@ -24,9 +24,35 @@ def _parse_id_list(value):
 
 
 # Casilleros que existen físicamente pero están fuera de servicio (p.ej. un
-# puerto dañado en la placa). Se excluyen de todo flujo de depósito/apertura
-# y se muestran como "Fuera de Servicio" en vez de sondearlos por serial.
+# puerto dañado en la placa sin recablear). Se excluyen de todo flujo de
+# depósito/apertura y se muestran como "Fuera de Servicio" en vez de
+# sondearlos por serial.
 DISABLED_LOCKERS = _parse_id_list(os.environ.get('DISABLED_LOCKERS', ''))
+
+# Mapeo de casillero lógico (1..NUM_LOCKERS, lo que ve el admin/cliente) a
+# canal físico real en la placa. Por defecto es 1:1 (casillero 1 = canal 1),
+# pero si un puerto de la placa se daña y las puertas se recablean a otros
+# canales, esto se ajusta en .env sin tocar código. Ejemplo: si el puerto 1
+# de la placa está frito y todo se recableó un canal más adelante,
+# LOCKER_CHANNELS=2,3,4,5 hace que el casillero 1 hable con el canal 2, etc.
+def _parse_channel_list(value, default_length):
+    if not value:
+        return list(range(1, default_length + 1))
+    return [int(x.strip()) for x in value.split(',') if x.strip()]
+
+
+LOCKER_CHANNELS = _parse_channel_list(os.environ.get('LOCKER_CHANNELS', ''), NUM_LOCKERS)
+if len(LOCKER_CHANNELS) != NUM_LOCKERS:
+    print(
+        f"WARNING: LOCKER_CHANNELS tiene {len(LOCKER_CHANNELS)} canal(es) pero "
+        f"NUM_LOCKERS={NUM_LOCKERS}; revisa tu .env, el mapeo puede quedar incompleto."
+    )
+
+BAY_TO_CHANNEL = {bay_id: channel for bay_id, channel in enumerate(LOCKER_CHANNELS, start=1)}
+
+
+def channel_for(bay_id):
+    return BAY_TO_CHANNEL.get(bay_id, bay_id)
 
 SERIAL_PORT = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
 BAUD_RATE = int(os.environ.get('BAUD_RATE', 9600))

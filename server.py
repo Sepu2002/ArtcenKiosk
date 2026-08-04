@@ -78,8 +78,9 @@ def api_config():
 
 # --- Locker status (hardware + DB merged) ---
 def _merged_bays(include_pickup_code=False):
-    enabled_channels = [i for i in range(1, config.NUM_LOCKERS + 1) if i not in config.DISABLED_LOCKERS]
-    hw_statuses = {s['channel']: s['status'] for s in hardware.get_all_statuses(enabled_channels)}
+    enabled_bay_ids = [i for i in range(1, config.NUM_LOCKERS + 1) if i not in config.DISABLED_LOCKERS]
+    channels_to_poll = [config.channel_for(bay_id) for bay_id in enabled_bay_ids]
+    hw_statuses = {s['channel']: s['status'] for s in hardware.get_all_statuses(channels_to_poll)}
     # Solo se muestran casilleros dentro del rango físico actual (NUM_LOCKERS)
     # — filas más allá de eso son de una configuración anterior con más
     # casilleros y ya no aplican a este sitio.
@@ -89,7 +90,7 @@ def _merged_bays(include_pickup_code=False):
         if bay['id'] in config.DISABLED_LOCKERS:
             hardware_status = "DISABLED"
         else:
-            hardware_status = hw_statuses.get(bay['id'], "UNKNOWN")
+            hardware_status = hw_statuses.get(config.channel_for(bay['id']), "UNKNOWN")
         entry = {
             "id": bay['id'],
             "occupied": bool(bay['occupied']),
@@ -112,7 +113,7 @@ def api_lockers():
 
 @app.route('/api/lockers/<int:bay_id>/status')
 def api_locker_status(bay_id):
-    status = hardware.get_lock_status(bay_id)
+    status = hardware.get_lock_status(config.channel_for(bay_id))
     return jsonify({"success": True, "status": status["status"], "channel": bay_id})
 
 
@@ -162,7 +163,7 @@ def admin_deposit():
     if bay['occupied']:
         return jsonify({"success": False, "error": "Casillero ocupado"}), 409
 
-    if not hardware.open_locker(bay_id):
+    if not hardware.open_locker(config.channel_for(bay_id)):
         log('error', f"Fallo al abrir casillero {bay_id} para depósito")
         return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
 
@@ -203,7 +204,7 @@ def admin_open():
     if bay_id in config.DISABLED_LOCKERS:
         return jsonify({"success": False, "error": "Casillero fuera de servicio"}), 409
 
-    if not hardware.open_locker(bay_id):
+    if not hardware.open_locker(config.channel_for(bay_id)):
         log('error', f"Fallo al abrir casillero {bay_id} manualmente")
         return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
 
@@ -242,7 +243,7 @@ def pickup():
         log('warning', f"Intento de recogida con código inválido: {code}")
         return jsonify({"success": False, "error": "El código no es válido o ya fue usado"}), 404
 
-    if not hardware.open_locker(bay['id']):
+    if not hardware.open_locker(config.channel_for(bay['id'])):
         log('error', f"Fallo al abrir casillero {bay['id']} para recogida")
         return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
 
