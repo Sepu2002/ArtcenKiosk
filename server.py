@@ -1,155 +1,274 @@
 # Save this as server.py
-import serial
+import logging
+import secrets
 import time
-import functools
-import logging # <-- 1. IMPORTAR LOGGING
+from datetime import timedelta
+from functools import wraps
 from logging.handlers import RotatingFileHandler
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 
-# --- Protocol Configuration (Sin cambios) ---
-HEADER = b'\x57\x4B\x4C\x59'  # "WKLY"
-BOARD_ADDR = b'\x01'
-CMD_BYTE_OPEN = b'\x82'
-CMD_BYTE_CHECK = b'\x83'
-CMD_OK_RESPONSE = b'\x00'
+from flask import Flask, request, jsonify, session, send_from_directory
+from werkzeug.security import check_password_hash
 
-# --- Serial Port Configuration (Sin cambios) ---
-SERIAL_PORT = '/dev/ttyUSB0'
-BAUD_RATE = 9600
-RESPONSE_LENGTH = 11
+import config
+import db
+import hardware
 
-# --- Flask App Setup ---
-app = Flask(__name__)
-CORS(app)
+app = Flask(__name__, static_folder=None)
+app.secret_key = config.SECRET_KEY
+app.permanent_session_lifetime = timedelta(minutes=config.SESSION_LIFETIME_MINUTES)
 
-# --- 2. CONFIGURACIÓN DEL LOGGING ---
-# Configura el logger para que escriba en un archivo llamado 'action_log.log'
-# 'RotatingFileHandler' asegura que el archivo no crezca indefinidamente.
-# Creará hasta 5 archivos de respaldo de 1MB.
-log_file = 'action_log.log'
-log_handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=5)
-log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-log_handler.setFormatter(log_formatter)
+db.init_db()
 
+# --- Logging: file (for tailing on the Pi) + DB (queryable audit trail) ---
+log_handler = RotatingFileHandler(config.LOG_FILE, maxBytes=1024 * 1024, backupCount=5)
+log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 app.logger.addHandler(log_handler)
 app.logger.setLevel(logging.INFO)
 app.logger.info('--- Kiosk Lock Server INICIADO ---')
-# --- FIN DE CONFIGURACIÓN DE LOGGING ---
 
 
-# --- Protocol Helper Functions (Sin cambios) ---
-def calculate_checksum(payload):
-    checksum = functools.reduce(lambda a, b: a ^ b, payload)
-    return bytes([checksum])
+def log(level, message):
+    getattr(app.logger, level)(message)
+    db.log_event(level.upper(), message)
 
-def build_command(cmd_byte, channel, data_bytes=b''):
-    channel_byte = bytes([channel])
-    payload = BOARD_ADDR + cmd_byte + channel_byte + data_bytes
-    length = 4 + 1 + len(payload) + 1
-    length_byte = bytes([length])
-    checksum = calculate_checksum(payload)
-    packet = HEADER + length_byte + payload + checksum
-    return packet
 
-def _send_serial_command(command):
-    print(f"Sending Command:   {command.hex(' ')}")
+# --- Simple in-memory rate limit for pickup-code attempts ---
+_pickup_attempts = {}
+
+
+def _is_rate_limited(ip):
+    now = time.time()
+    window = config.PICKUP_RATE_LIMIT_WINDOW_SECONDS
+    attempts = [t for t in _pickup_attempts.get(ip, []) if now - t < window]
+    if len(attempts) >= config.PICKUP_RATE_LIMIT_ATTEMPTS:
+        _pickup_attempts[ip] = attempts
+        return True
+    attempts.append(now)
+    _pickup_attempts[ip] = attempts
+    return False
+
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get('is_admin'):
+            return jsonify({"success": False, "error": "No autorizado"}), 401
+        return f(*args, **kwargs)
+    return wrapper
+
+
+# --- Static frontend (single entrypoint: http://127.0.0.1:5000/) ---
+@app.route('/')
+def index():
+    return send_from_directory(config.BASE_DIR, 'index.html')
+
+
+@app.route('/<path:filename>')
+def static_files(filename):
+    if filename.split('/')[0] not in ('css', 'js', 'images'):
+        return jsonify({"success": False, "error": "No encontrado"}), 404
+    return send_from_directory(config.BASE_DIR, filename)
+
+
+# --- Config ---
+@app.route('/api/config')
+def api_config():
+    return jsonify({"numLockers": config.NUM_LOCKERS})
+
+
+# --- Locker status (hardware + DB merged) ---
+def _merged_bays(include_pickup_code=False):
+    hw_statuses = {s['channel']: s['status'] for s in hardware.get_all_statuses(config.NUM_LOCKERS)}
+    bays = db.get_all_bays()
+    result = []
+    for bay in bays:
+        entry = {
+            "id": bay['id'],
+            "occupied": bool(bay['occupied']),
+            "customerEmail": bay['customer_email'],
+            "hardwareStatus": hw_statuses.get(bay['id'], "UNKNOWN"),
+        }
+        # El código de recogida solo se expone a un admin autenticado: es la
+        # credencial del cliente, no debe ser legible desde un GET público.
+        if include_pickup_code:
+            entry["pickupCode"] = bay['pickup_code']
+        result.append(entry)
+    return result
+
+
+@app.route('/api/lockers')
+def api_lockers():
+    is_admin = bool(session.get('is_admin'))
+    return jsonify({"success": True, "bays": _merged_bays(include_pickup_code=is_admin)})
+
+
+@app.route('/api/lockers/<int:bay_id>/status')
+def api_locker_status(bay_id):
+    status = hardware.get_lock_status(bay_id)
+    return jsonify({"success": True, "status": status["status"], "channel": bay_id})
+
+
+# --- Admin auth ---
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    data = request.get_json(silent=True) or {}
+    password = data.get('password', '')
+    if check_password_hash(config.ADMIN_PASSWORD_HASH, password):
+        session.permanent = True
+        session['is_admin'] = True
+        return jsonify({"success": True})
+    log('warning', "Intento fallido de login de administrador")
+    return jsonify({"success": False, "error": "Contraseña incorrecta"}), 401
+
+
+@app.route('/api/admin/logout', methods=['POST'])
+def admin_logout():
+    session.clear()
+    return jsonify({"success": True})
+
+
+@app.route('/api/admin/session')
+def admin_session():
+    return jsonify({"isAdmin": bool(session.get('is_admin'))})
+
+
+# --- Deposit flow (admin) ---
+@app.route('/api/admin/deposit', methods=['POST'])
+@admin_required
+def admin_deposit():
+    data = request.get_json(silent=True) or {}
     try:
-        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1.0) as ser:
-            ser.flushInput()
-            ser.flushOutput()
-            ser.write(command)
-            time.sleep(0.1)
-            response = ser.read(RESPONSE_LENGTH * 2)
-            if not response:
-                print("Received Response: ...No response (OK for 'open')")
-                return b''
-            print(f"Received Response(s): {response.hex(' ')}")
-            return response
-    except serial.SerialException as e:
-        print(f"SERIAL ERROR: {e}")
-        app.logger.error(f"SERIAL ERROR: {e}") # Log del error
-        return None
-    except Exception as e:
-        print(f"GENERAL ERROR: {e}")
-        app.logger.error(f"GENERAL ERROR: {e}") # Log del error
-        return None
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+    email = (data.get('email') or '').strip()
+    if not email or '@' not in email:
+        return jsonify({"success": False, "error": "Correo inválido"}), 400
 
-def _get_lock_status(locker_id):
-    command = build_command(CMD_BYTE_CHECK, locker_id)
-    response = _send_serial_command(command)
-    status_dict = {"channel": locker_id, "status": "UNKNOWN"}
-    if response is not None:
-        try:
-            if (response[0:4] == HEADER and
-                response[6] == CMD_BYTE_CHECK[0] and
-                response[8] == locker_id):
-                state_byte = response[9]
-                if state_byte == 0x01:
-                    status_dict["status"] = "LOCKED"
-                elif state_byte == 0x00:
-                    status_dict["status"] = "UNLOCKED"
-        except IndexError:
-            pass
-    return status_dict
+    bay = db.get_bay(bay_id)
+    if not bay:
+        return jsonify({"success": False, "error": "Casillero no existe"}), 404
+    if bay['occupied']:
+        return jsonify({"success": False, "error": "Casillero ocupado"}), 409
 
-# --- Web Server API Endpoints ---
+    if not hardware.open_locker(bay_id):
+        log('error', f"Fallo al abrir casillero {bay_id} para depósito")
+        return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
 
-@app.route('/open-locker', methods=['POST'])
-def handle_open_locker():
-    data = request.get_json()
-    locker_num = int(data['lockerId'])
-    app.logger.info(f"Comando de APERTURA recibido para el casillero {locker_num}") # <-- LOG
-    command = build_command(CMD_BYTE_OPEN, locker_num)
-    response = _send_serial_command(command) 
-    if response is not None:
-        return jsonify({"success": True, "message": f"Locker {locker_num} command sent."})
-    else:
-        app.logger.error(f"Fallo al enviar comando de APERTURA al casillero {locker_num}") # <-- LOG
-        return jsonify({"success": False, "error": "Failed to communicate."}), 500
-
-@app.route('/check-status/<int:locker_id>', methods=['GET'])
-def handle_check_status(locker_id):
-    status_dict = _get_lock_status(locker_id)
-    return jsonify({"success": True, "status": status_dict["status"], "channel": locker_id})
-
-@app.route('/check-all-statuses', methods=['GET'])
-def handle_check_all_statuses():
-    all_statuses = []
-    for i in range(1, 9):
-        all_statuses.append(_get_lock_status(i))
-    return jsonify({"success": True, "bays": all_statuses})
+    pickup_code = secrets.token_hex(max(config.PICKUP_CODE_LENGTH, 4) // 2).upper()
+    db.stage_deposit(bay_id, email, pickup_code)
+    log('info', f"Comando de apertura enviado para depósito en casillero {bay_id}")
+    return jsonify({"success": True, "pickupCode": pickup_code})
 
 
-# --- 3. NUEVO ENDPOINT DE LOGGING ---
-@app.route('/log', methods=['POST'])
+@app.route('/api/admin/deposit/confirm', methods=['POST'])
+@admin_required
+def admin_deposit_confirm():
+    data = request.get_json(silent=True) or {}
+    try:
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    bay = db.get_bay(bay_id)
+    if not bay or not bay['pickup_code'] or bay['occupied']:
+        return jsonify({"success": False, "error": "No hay un depósito pendiente para este casillero"}), 400
+
+    db.confirm_deposit(bay_id)
+    log('info', f"PAQUETE DEPOSITADO en casillero {bay_id} para {bay['customer_email']} (Código: {bay['pickup_code']})")
+    return jsonify({"success": True})
+
+
+# --- Manual maintenance (admin) ---
+@app.route('/api/admin/open', methods=['POST'])
+@admin_required
+def admin_open():
+    data = request.get_json(silent=True) or {}
+    try:
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    if not hardware.open_locker(bay_id):
+        log('error', f"Fallo al abrir casillero {bay_id} manualmente")
+        return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
+
+    log('info', f"Apertura manual (admin) del casillero {bay_id}")
+    return jsonify({"success": True})
+
+
+@app.route('/api/admin/clear', methods=['POST'])
+@admin_required
+def admin_clear():
+    data = request.get_json(silent=True) or {}
+    try:
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    db.clear_bay(bay_id)
+    log('info', f"Casillero {bay_id} liberado manualmente (admin)")
+    return jsonify({"success": True})
+
+
+# --- Pickup flow (customer, public but rate-limited + server-validated code) ---
+@app.route('/api/pickup', methods=['POST'])
+def pickup():
+    ip = request.remote_addr or 'unknown'
+    if _is_rate_limited(ip):
+        return jsonify({"success": False, "error": "Demasiados intentos. Espera un momento e intenta de nuevo."}), 429
+
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or '').strip().upper()
+    if not code:
+        return jsonify({"success": False, "error": "Código requerido"}), 400
+
+    bay = db.get_bay_by_code(code)
+    if not bay:
+        log('warning', f"Intento de recogida con código inválido: {code}")
+        return jsonify({"success": False, "error": "El código no es válido o ya fue usado"}), 404
+
+    if not hardware.open_locker(bay['id']):
+        log('error', f"Fallo al abrir casillero {bay['id']} para recogida")
+        return jsonify({"success": False, "error": "Fallo al comunicar con el hardware"}), 500
+
+    log('info', f"Casillero {bay['id']} abierto para recogida (Código: {code})")
+    return jsonify({"success": True, "bayId": bay['id']})
+
+
+@app.route('/api/pickup/confirm', methods=['POST'])
+def pickup_confirm():
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or '').strip().upper()
+    try:
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    bay = db.get_bay(bay_id)
+    if not bay or bay['pickup_code'] != code:
+        return jsonify({"success": False, "error": "El código no coincide con el depósito pendiente"}), 400
+
+    log('info', f"PAQUETE RECOGIDO del casillero {bay_id} (Código: {code})")
+    db.clear_bay(bay_id)
+    return jsonify({"success": True})
+
+
+# --- Frontend event logging (kept for client-side errors worth recording) ---
+@app.route('/api/log', methods=['POST'])
 def handle_log_event():
-    """
-    Recibe un evento de log desde el frontend (GitHub Pages) y 
-    lo escribe en el archivo de log local.
-    """
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     message = data.get('message')
-    level = data.get('level', 'info').upper()
-
+    level = (data.get('level') or 'info').lower()
     if not message:
         return jsonify({"success": False, "error": "Missing message"}), 400
-
-    # Escribe en el archivo action_log.log
-    if level == 'INFO':
-        app.logger.info(f"FRONTEND: {message}")
-    elif level == 'WARNING':
-        app.logger.warning(f"FRONTEND: {message}")
-    elif level == 'ERROR':
-        app.logger.error(f"FRONTEND: {message}")
-    
+    if level not in ('info', 'warning', 'error'):
+        level = 'info'
+    log(level, f"FRONTEND: {message}")
     return jsonify({"success": True})
-# --- FIN DE NUEVO ENDPOINT ---
 
 
-# --- Start the Server ---
 if __name__ == '__main__':
-    print("--- Starting Kiosk Lock Server (v4 - Con Logging) ---")
-    print("API de logging lista en POST /log")
-    print("Archivo de log guardado en: action_log.log")
+    print("--- Starting Kiosk Lock Server ---")
+    print(f"Frontend + API listos en http://127.0.0.1:5000/  ({config.NUM_LOCKERS} casilleros)")
     app.run(host='127.0.0.1', port=5000)

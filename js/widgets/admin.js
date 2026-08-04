@@ -1,44 +1,53 @@
 // Este archivo contiene toda la lógica y las pantallas para el administrador.
+// La verificación de contraseña, la generación de códigos de recogida y las
+// aperturas de casillero ahora las decide siempre el servidor — este archivo
+// solo pide acciones y refleja lo que el servidor confirma.
 import { showModal, closeModal } from './modal.js';
-import { bays, saveState } from '../utils/state.js';
+import { bays, refreshState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
-// Importamos el polling de mi respuesta anterior
 import { waitForDoorClose } from '../utils/hardware.js';
+import { API_BASE, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from '../utils/config.js';
 
-// --- CONFIGURACIÓN DE EMAILJS ---
-const EMAILJS_PUBLIC_KEY = 'cLa8lTnHzamomf5by';
-const EMAILJS_SERVICE_ID = 'service_gyjmvdw';
-const EMAILJS_TEMPLATE_ID = 'template_zwug2z7';
-
-// ... (showAdminLogin y verifyAdminPassword sin cambios) ...
 export function showAdminLogin() {
     const content = `
         <p class="mb-4 text-gray-600 dark:text-gray-400">Por favor, introduce la contraseña de administrador para continuar.</p>
         <input type="password" id="admin-password" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg mb-4" placeholder="Contraseña" inputmode="text">
         <button id="admin-submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition mb-4">Iniciar Sesión</button>
     `;
-    showModal('Login de Admin', content, 0, '#admin-password'); // Añadido selector de input
+    showModal('Login de Admin', content, 0, '#admin-password');
     document.getElementById('admin-password').focus();
     document.getElementById('admin-submit').addEventListener('click', verifyAdminPassword);
-    document.getElementById('admin-password').addEventListener('keypress', (e) => {
+    document.getElementById('admin-password').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') verifyAdminPassword();
     });
 }
 
-function verifyAdminPassword() {
+async function verifyAdminPassword() {
     const password = document.getElementById('admin-password').value;
-    if (password === 'admin123') {
-        showAdminPanel();
-    } else {
-        showModal('Error', '<p class="text-red-500">Contraseña incorrecta. Por favor, inténtalo de nuevo.</p>', 3000);
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+            await showAdminPanel();
+        } else {
+            showModal('Error', '<p class="text-red-500">Contraseña incorrecta. Por favor, inténtalo de nuevo.</p>', 3000);
+        }
+    } catch (e) {
+        console.error('Falló el login de admin:', e);
+        showModal('Error de Conexión', '<p class="text-red-500">No se pudo contactar al servidor.</p>', 3000);
     }
 }
 
 /**
  * Muestra el panel de control del administrador.
  */
-export function showAdminPanel() {
-    // ... (Esta función no cambia, pero llamará a renderAdminBays que sí cambia) ...
+export async function showAdminPanel() {
+    await refreshState(); // Trae el estado más reciente (incluye códigos, porque ya hay sesión de admin)
+
     const content = `
         <div class="mb-6">
             <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Estado de los Casilleros</h3>
@@ -48,26 +57,29 @@ export function showAdminPanel() {
             <button id="deposit-package-btn" class="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 transition">Depositar Paquete</button>
             <button id="manage-bays-btn" class="bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-700 transition">Gestionar Casilleros</button>
         </div>
-        <div>
-             <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Gestión de Datos</h3>
-             <div class="grid grid-cols-2 gap-4">
-                <button id="import-csv-btn" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Importar de CSV</button>
-                <button id="export-csv-btn" class="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Exportar a CSV</button>
-             </div>
+        <div class="grid grid-cols-2 gap-4">
+            <button id="export-csv-btn" class="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Exportar Reporte CSV</button>
+            <button id="admin-logout-btn" class="bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transition">Cerrar Sesión</button>
         </div>
     `;
     showModal('Panel de Administrador', content);
-    renderAdminBays(); // Esta función ahora es más inteligente
+    renderAdminBays();
 
     document.getElementById('deposit-package-btn').addEventListener('click', showDepositScreen);
     document.getElementById('manage-bays-btn').addEventListener('click', showManageBaysScreen);
     document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
-    document.getElementById('import-csv-btn').addEventListener('click', () => document.getElementById('csv-file-input').click());
+    document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
 }
 
-/**
- * MODIFICADO: Muestra el estado físico real (Hardware)
- */
+async function handleLogout() {
+    try {
+        await fetch(`${API_BASE}/api/admin/logout`, { method: 'POST' });
+    } catch (e) {
+        console.error('Falló al cerrar sesión:', e);
+    }
+    closeModal();
+}
+
 function renderAdminBays() {
     const baysContainer = document.getElementById('admin-bays-container');
     if (!baysContainer) return;
@@ -75,31 +87,25 @@ function renderAdminBays() {
     baysContainer.innerHTML = bays.map(bay => {
         let statusText, statusColor, details = '';
 
-        // Lógica de estado basada en tu aclaración
         if (bay.hardwareStatus === "UNLOCKED") {
             statusText = "PUERTA ABIERTA";
-            statusColor = "yellow"; // Estado de alerta, ni rojo ni verde
+            statusColor = "yellow";
         } else if (bay.hardwareStatus === "UNKNOWN") {
             statusText = "DESCONOCIDO";
             statusColor = "gray";
+        } else if (bay.occupied) {
+            statusText = "Ocupado";
+            statusColor = "red";
+            details = `
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Para: <span class="font-normal break-all">${bay.customerEmail}</span></p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Código: <span class="font-mono text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/50 px-2 py-1 rounded">${bay.pickupCode}</span></p>
+            `;
         } else {
-            // El hardware está "LOCKED" (cerrado)
-            if (bay.occupied) {
-                statusText = "Ocupado";
-                statusColor = "red";
-                details = `
-                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Para: <span class="font-normal break-all">${bay.customerEmail}</span></p>
-                    <p class="text-sm text-gray-600 dark:text-gray-300 font-medium mt-1">Código: <span class="font-mono text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/50 px-2 py-1 rounded">${bay.pickupCode}</span></p>
-                `;
-            } else {
-                statusText = "Disponible";
-                statusColor = "green";
-                // Está cerrado y no ocupado (tu aclaración)
-                details = `<p class="text-sm text-gray-500 dark:text-gray-400">(Cerrado y listo)</p>`;
-            }
+            statusText = "Disponible";
+            statusColor = "green";
+            details = `<p class="text-sm text-gray-500 dark:text-gray-400">(Cerrado y listo)</p>`;
         }
-        
-        // Define las clases de color de Tailwind dinámicamente
+
         const statusColors = {
             red: "text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-900/50",
             green: "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-900/50",
@@ -120,12 +126,10 @@ function renderAdminBays() {
 }
 
 /**
- * MODIFICADO: Solo muestra casilleros disponibles (Cerrados y No Ocupados)
+ * Solo muestra casilleros disponibles (cerrados y no ocupados).
  */
 function showDepositScreen() {
-    // ESTA ES LA LÓGICA CLAVE
-    // Un casillero "disponible" es uno que está CERRADO y NO OCUPADO
-    const availableBays = bays.filter(bay => 
+    const availableBays = bays.filter(bay =>
         bay.hardwareStatus === "LOCKED" && !bay.occupied
     );
 
@@ -146,85 +150,62 @@ function showDepositScreen() {
     document.getElementById('submit-deposit').addEventListener('click', handleDeposit);
 }
 
-/**
- * MODIFICADO: Usa el polling de 'waitForDoorClose' (mi respuesta anterior)
- */
 async function handleDeposit() {
     const selectedBayId = parseInt(document.getElementById('bay-select').value);
     const email = document.getElementById('customer-email').value;
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-        alert("Por favor, introduce una dirección de correo válida.");
+        showModal('Correo Inválido', '<p class="text-red-500">Por favor, introduce una dirección de correo válida.</p>', 3000);
         return;
     }
 
-    const pickupCode = `PKG${Date.now().toString().slice(-6)}`;
-    const bay = bays.find(b => b.id === selectedBayId);
-    
-    if (bay) {
-        showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Enviando comando para abrir el Casillero ${selectedBayId}...</p>`, 0);
-        
-        try {
-            // 1. Enviar comando de apertura
-            const response = await fetch('http://127.0.0.1:5000/open-locker', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lockerId: selectedBayId }),
-            });
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Fallo en la comunicación');
+    showModal('Abriendo Casillero...', `<p class="dark:text-gray-300">Enviando comando para abrir el Casillero ${selectedBayId}...</p>`, 0);
 
-            // 2. La puerta se abrió. Actualiza el estado del hardware localmente
-            bay.hardwareStatus = "UNLOCKED"; 
-
-            // 3. Llama a la función de sondeo (polling)
-            waitForDoorClose(selectedBayId, async () => {
-                // --- CÓDIGO EJECUTADO DESPUÉS DE CERRAR LA PUERTA ---
-                console.log(`Puerta ${selectedBayId} cerrada. Registrando el depósito.`);
-                
-                // 4. Actualiza AMBOS estados y guarda
-                bay.hardwareStatus = "LOCKED";
-                bay.occupied = true;
-                bay.customerEmail = email;
-                bay.pickupCode = pickupCode;
-                saveState();
-
-                // 5. ¡NUEVO! Envía el log al servidor
-                fetch('http://127.0.0.1:5000/log', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: `PAQUETE DEPOSITADO en casillero ${selectedBayId} para ${email} (Código: ${pickupCode})`
-                    })
-                }).catch(err => console.error("Fallo al enviar log:", err));
-
-                // 6. Envía el correo
-                const emailSent = await sendEmailWithQRCode(email, pickupCode);
-                
-                if (emailSent) {
-                    showQRCodeModal(pickupCode, email, true);
-                } else {
-                    showQRCodeModal(pickupCode, email, false);
-                }
-                // --- FIN DEL CALLBACK ---
-            });
-
-        } catch (error) {
-            console.error("Failed to open locker:", error);
-            showModal('Error de Hardware', `<p class="text-red-500">No se pudo abrir el casillero. Revisa la conexión.</p>`, 5000);
-        }
+    let pickupCode;
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/deposit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bayId: selectedBayId, email }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Fallo en la comunicación');
+        pickupCode = result.pickupCode;
+    } catch (error) {
+        console.error("Failed to open locker:", error);
+        showModal('Error de Hardware', `<p class="text-red-500">${error.message || 'No se pudo abrir el casillero. Revisa la conexión.'}</p>`, 5000);
+        return;
     }
 
-    
-    
+    // La puerta se abrió. Espera a que el operador la cierre para confirmar el depósito.
+    waitForDoorClose(selectedBayId, async () => {
+        try {
+            const confirmResponse = await fetch(`${API_BASE}/api/admin/deposit/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bayId: selectedBayId }),
+            });
+            const confirmResult = await confirmResponse.json();
+            if (!confirmResponse.ok || !confirmResult.success) {
+                throw new Error(confirmResult.error || 'Fallo al confirmar el depósito');
+            }
+        } catch (error) {
+            console.error('Falló al confirmar el depósito:', error);
+            showModal('Error', `<p class="text-red-500">El casillero se cerró pero no se pudo confirmar el depósito: ${error.message}</p>`, 5000);
+            return;
+        }
+
+        await refreshState();
+
+        const emailSent = await sendEmailWithQRCode(email, pickupCode);
+        showQRCodeModal(pickupCode, email, emailSent);
+    });
 }
 
-
-// ... (sendEmailWithQRCode y showQRCodeModal sin cambios) ...
 async function sendEmailWithQRCode(toEmail, pickupCode) {
     if (!EMAILJS_PUBLIC_KEY) {
-         console.warn("Claves de EmailJS no configuradas. Omitiendo envío de correo.");
-         return false;
+        console.warn("Claves de EmailJS no configuradas. Omitiendo envío de correo.");
+        return false;
     }
 
     const canvas = document.createElement('canvas');
@@ -232,7 +213,7 @@ async function sendEmailWithQRCode(toEmail, pickupCode) {
     const qrCodeImage = canvas.toDataURL('image/png');
 
     const templateParams = { to_email: toEmail, pickup_code: pickupCode, qr_code_image: qrCodeImage };
-    
+
     try {
         showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${toEmail}</p>`, 0);
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
@@ -241,7 +222,6 @@ async function sendEmailWithQRCode(toEmail, pickupCode) {
         console.error('Falló al enviar el correo:', error);
         return false;
     }
-
 }
 
 function showQRCodeModal(pickupCode, email, isConfirmation = false) {
@@ -259,20 +239,15 @@ function showQRCodeModal(pickupCode, email, isConfirmation = false) {
     `;
     showModal(title, content);
     new QRious({ element: document.getElementById('qr-canvas'), value: pickupCode, size: 200 });
-    
+
     document.getElementById('qr-close-btn').addEventListener('click', () => {
         closeModal();
         showAdminPanel();
     });
 }
 
-
-// ... (showManageBaysScreen, confirmClearBay, handleClearBay sin cambios) ...
-// (Recuerda que estas funciones también deberían usar el polling,
-// pero la corrección que te di en la respuesta anterior ya funciona)
 function showManageBaysScreen() {
     const baysContent = bays.map(bay => {
-        // Define estados basados en la nueva lógica
         let statusText, statusColor;
         if (bay.hardwareStatus === "UNLOCKED") {
             statusText = "PUERTA ABIERTA";
@@ -304,38 +279,30 @@ function showManageBaysScreen() {
     `;
     showModal('Gestionar Casilleros', content);
 
-    // Adjuntar el listener corregido
     document.querySelectorAll('.open-door-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
+        button.addEventListener('click', async (e) => {
             const bayId = e.currentTarget.dataset.bayId;
-            const bay = bays.find(b => b.id == bayId);
-            
             showModal('Abriendo...', `<p>Enviando comando para abrir el Casillero ${bayId}...</p>`, 0);
-            
-            fetch('http://127.0.0.1:5000/open-locker', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lockerId: bayId })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    showModal('Éxito', `<p>Casillero ${bayId} ha sido abierto.</p>`, 3000);
-                    // Actualiza el estado de hardware localmente
-                    if(bay) bay.hardwareStatus = "UNLOCKED";
-                    // Volvemos a renderizar la vista de gestión para mostrar "PUERTA ABIERTA"
-                    showManageBaysScreen();
-                } else {
-                    throw new Error(result.error || 'Fallo al abrir');
-                }
-            })
-            .catch(error => {
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/open`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bayId }),
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Fallo al abrir');
+
+                showModal('Éxito', `<p>Casillero ${bayId} ha sido abierto.</p>`, 2000);
+                await refreshState();
+                setTimeout(showManageBaysScreen, 2000);
+            } catch (error) {
                 console.error("Failed to open locker:", error);
                 showModal('Error', `<p class="text-red-500">No se pudo abrir el casillero: ${error.message}</p>`, 4000);
-            });
+            }
         });
     });
-    
+
     document.querySelectorAll('.clear-bay-btn').forEach(button => {
         button.addEventListener('click', (e) => confirmClearBay(parseInt(e.currentTarget.dataset.bayId)));
     });
@@ -355,15 +322,19 @@ function confirmClearBay(bayId) {
     document.getElementById('confirm-clear-btn').addEventListener('click', () => handleClearBay(bayId));
 }
 
-function handleClearBay(bayId) {
-    const bay = bays.find(b => b.id === bayId);
-    if(bay) {
-        // Solo limpia el software. El estado del hardware se leerá
-        // la próxima vez que se cierre la puerta o se refresque.
-        bay.occupied = false;
-        bay.customerEmail = null;
-        bay.pickupCode = null;
+async function handleClearBay(bayId) {
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/clear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bayId }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Fallo al liberar el casillero');
+    } catch (error) {
+        console.error('Falló al liberar el casillero:', error);
+        showModal('Error', `<p class="text-red-500">${error.message}</p>`, 4000);
     }
-    saveState();
+    await refreshState();
     showManageBaysScreen();
 }

@@ -1,108 +1,67 @@
 // Este archivo maneja todo lo relacionado con el estado de los casilleros.
+// El servidor (server.py + SQLite) es la única fuente de verdad: aquí solo
+// guardamos una copia en memoria para dibujar la UI.
 import { showModal } from '../widgets/modal.js';
+import { API_BASE } from './config.js';
 
-// El estado de la aplicación vive aquí.
 export let bays = [];
 
 /**
- * Carga el estado inicial sincronizando el hardware con localStorage.
+ * Carga el estado actual de los casilleros desde el servidor, que ya
+ * combina la base de datos con el estado físico real del hardware.
  */
 export async function initializeState() {
-    console.log("Sincronizando estado del hardware...");
-    let savedSoftwareBays = [];
-    
-    // 1. Cargar el estado "software" (reservas) desde localStorage
     try {
-        const savedState = localStorage.getItem('lockerState');
-        if (savedState) {
-            savedSoftwareBays = JSON.parse(savedState);
-        }
-    } catch (e) {
-        console.error("Falló al parsear el estado de localStorage", e);
-    }
-
-    // 2. Cargar el estado "hardware" (físico) desde el servidor
-    try {
-        const response = await fetch('http://127.0.0.1:5000/check-all-statuses');
-        if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
-        
-        const data = await response.json();
-        if (!data.success) throw new Error('El servidor falló al obtener el estado');
-
-        const hardwareBays = data.bays;
-
-        // 3. Fusionar los estados (Lógica CORREGIDA)
-        bays = hardwareBays.map(hwBay => {
-            const swBay = savedSoftwareBays.find(b => b.id === hwBay.channel);
-            
-            // Definir los estados del software
-            const isOccupied = swBay?.occupied || false;
-            const customerEmail = swBay?.customerEmail || null;
-            const pickupCode = swBay?.pickupCode || null;
-
-            // Definir el estado físico
-            // "LOCKED" (cerrado) o "UNLOCKED" (abierto) o "UNKNOWN" (error)
-            const hardwareStatus = hwBay.status;
-
-            return {
-                id: hwBay.channel,
-                occupied: isOccupied,
-                customerEmail: customerEmail,
-                pickupCode: pickupCode,
-                hardwareStatus: hardwareStatus // Guardamos el estado físico real
-            };
-        });
-        
-        console.log("Estado sincronizado con éxito:", bays);
-        saveState(); // Guarda el nuevo estado fusionado
-
+        await refreshState(true);
     } catch (e) {
         console.error("¡FALLO CRÍTICO! No se pudo conectar al servidor de casilleros.", e);
-        bays = getDefaultState(savedSoftwareBays); // Fallback al estado guardado
-        showModal("Error de Conexión", 
-            `<p class="text-red-500">No se pudo conectar al hardware. El estado mostrado puede ser incorrecto.</p>`,
+        bays = readSnapshot();
+        showModal(
+            "Error de Conexión",
+            `<p class="text-red-500">No se pudo conectar al servidor. El estado mostrado puede estar desactualizado.</p>`,
             0
         );
     }
 }
 
 /**
- * Guarda el estado actual en localStorage.
+ * Vuelve a pedir el estado más reciente al servidor. Se llama después de
+ * cualquier acción de admin/cliente para que la UI refleje lo que el
+ * servidor realmente aprobó, no lo que el cliente asumió.
  */
-export function saveState() {
+export async function refreshState(throwOnError = false) {
     try {
-        // Solo guardamos los datos del software, no el estado del hardware
-        const softwareState = bays.map(b => ({
-            id: b.id,
-            occupied: b.occupied,
-            customerEmail: b.customerEmail,
-            pickupCode: b.pickupCode
-        }));
-        localStorage.setItem('lockerState', JSON.stringify(softwareState));
+        const response = await fetch(`${API_BASE}/api/lockers`);
+        if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+
+        const data = await response.json();
+        if (!data.success) throw new Error('El servidor falló al obtener el estado');
+
+        bays = data.bays;
+        cacheSnapshot();
     } catch (e) {
-        console.error("Falló al guardar el estado en localStorage", e);
+        if (throwOnError) throw e;
+        console.error("Falló al refrescar el estado", e);
     }
 }
 
-/**
- * Reemplaza el estado actual de los casilleros (usado para importación).
- * @param {Array} newBays - El nuevo array de casilleros.
- */
-export function setBays(newBays) {
-    bays = newBays;
+// --- Copia de respaldo NO autoritativa ---
+// Solo se usa para mostrar algo razonable si el servidor no responde por un
+// instante. Nunca se usa para decidir si un casillero puede abrirse: esa
+// decisión la toma siempre el servidor.
+function cacheSnapshot() {
+    try {
+        localStorage.setItem('lockerStateSnapshot', JSON.stringify(bays));
+    } catch (e) {
+        // No crítico si falla (p.ej. almacenamiento lleno o deshabilitado).
+    }
 }
 
-function getDefaultState(savedBays = null) {
-    if (savedBays && savedBays.length > 0) {
-        return savedBays.map(b => ({ ...b, hardwareStatus: "UNKNOWN" }));
+function readSnapshot() {
+    try {
+        const saved = localStorage.getItem('lockerStateSnapshot');
+        return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+        return [];
     }
-    
-    // Si no hay nada, genera un array de 8
-    return Array.from({ length: 8 }, (_, i) => ({
-        id: i + 1,
-        occupied: false,
-        customerEmail: null,
-        pickupCode: null,
-        hardwareStatus: "UNKNOWN" // Estado físico desconocido
-    }));
 }

@@ -1,6 +1,7 @@
 // Este archivo contiene lógica para interactuar con el hardware,
 // como esperar a que se cierre una puerta.
 import { showModal, closeModal } from '../widgets/modal.js';
+import { API_BASE } from './config.js';
 
 /**
  * Muestra un modal y sondea el estado de un casillero hasta que se cierra.
@@ -27,7 +28,7 @@ export function waitForDoorClose(bayId, onClosedCallback) {
     // 2. Inicia el sondeo (polling)
     const poller = setInterval(async () => {
         try {
-            const response = await fetch(`http://127.0.0.1:5000/check-status/${bayId}`);
+            const response = await fetch(`${API_BASE}/api/lockers/${bayId}/status`);
             if (!response.ok) {
                 console.error("Error de red al sondear el casillero.");
                 return; // Intenta de nuevo en el próximo intervalo
