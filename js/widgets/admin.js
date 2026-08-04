@@ -87,7 +87,11 @@ function renderAdminBays() {
     baysContainer.innerHTML = bays.map(bay => {
         let statusText, statusColor, details = '';
 
-        if (bay.hardwareStatus === "UNLOCKED") {
+        if (bay.hardwareStatus === "DISABLED") {
+            statusText = "Fuera de Servicio";
+            statusColor = "gray";
+            details = `<p class="text-sm text-gray-500 dark:text-gray-400">(No disponible)</p>`;
+        } else if (bay.hardwareStatus === "UNLOCKED") {
             statusText = "PUERTA ABIERTA";
             statusColor = "yellow";
         } else if (bay.hardwareStatus === "UNKNOWN") {
@@ -249,7 +253,10 @@ function showQRCodeModal(pickupCode, email, isConfirmation = false) {
 function showManageBaysScreen() {
     const baysContent = bays.map(bay => {
         let statusText, statusColor;
-        if (bay.hardwareStatus === "UNLOCKED") {
+        if (bay.hardwareStatus === "DISABLED") {
+            statusText = "Fuera de Servicio";
+            statusColor = "text-gray-600 bg-gray-100";
+        } else if (bay.hardwareStatus === "UNLOCKED") {
             statusText = "PUERTA ABIERTA";
             statusColor = "text-yellow-600 bg-yellow-100";
         } else if (bay.hardwareStatus === "LOCKED") {
@@ -260,16 +267,19 @@ function showManageBaysScreen() {
             statusColor = "text-gray-600 bg-gray-100";
         }
 
+        const isDisabled = bay.hardwareStatus === "DISABLED";
         return `
         <div class="border dark:border-gray-600 rounded-lg p-4 flex flex-col justify-between">
             <div class="flex justify-between items-center mb-3">
                <h4 class="font-bold dark:text-gray-100">Casillero ${bay.id}</h4>
                <span class="text-xs font-semibold ${statusColor} px-2 py-1 rounded-full">${statusText}</span>
             </div>
+            ${isDisabled ? '' : `
             <div class="flex space-x-2">
                <button data-bay-id="${bay.id}" class="open-door-btn flex-1 bg-yellow-500 text-black p-2 rounded-lg text-sm">Abrir Puerta</button>
                ${bay.occupied ? `<button data-bay-id="${bay.id}" class="clear-bay-btn flex-1 bg-red-600 text-white p-2 rounded-lg text-sm">Liberar</button>` : ''}
             </div>
+            `}
         </div>
     `}).join('');
 

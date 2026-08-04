@@ -74,5 +74,5 @@ def get_lock_status(channel):
     return status
 
 
-def get_all_statuses(num_lockers):
-    return [get_lock_status(i) for i in range(1, num_lockers + 1)]
+def get_all_statuses(channels):
+    return [get_lock_status(channel) for channel in channels]

@@ -78,15 +78,23 @@ def api_config():
 
 # --- Locker status (hardware + DB merged) ---
 def _merged_bays(include_pickup_code=False):
-    hw_statuses = {s['channel']: s['status'] for s in hardware.get_all_statuses(config.NUM_LOCKERS)}
-    bays = db.get_all_bays()
+    enabled_channels = [i for i in range(1, config.NUM_LOCKERS + 1) if i not in config.DISABLED_LOCKERS]
+    hw_statuses = {s['channel']: s['status'] for s in hardware.get_all_statuses(enabled_channels)}
+    # Solo se muestran casilleros dentro del rango físico actual (NUM_LOCKERS)
+    # — filas más allá de eso son de una configuración anterior con más
+    # casilleros y ya no aplican a este sitio.
+    bays = [b for b in db.get_all_bays() if b['id'] <= config.NUM_LOCKERS]
     result = []
     for bay in bays:
+        if bay['id'] in config.DISABLED_LOCKERS:
+            hardware_status = "DISABLED"
+        else:
+            hardware_status = hw_statuses.get(bay['id'], "UNKNOWN")
         entry = {
             "id": bay['id'],
             "occupied": bool(bay['occupied']),
             "customerEmail": bay['customer_email'],
-            "hardwareStatus": hw_statuses.get(bay['id'], "UNKNOWN"),
+            "hardwareStatus": hardware_status,
         }
         # El código de recogida solo se expone a un admin autenticado: es la
         # credencial del cliente, no debe ser legible desde un GET público.
@@ -145,6 +153,9 @@ def admin_deposit():
     if not email or '@' not in email:
         return jsonify({"success": False, "error": "Correo inválido"}), 400
 
+    if bay_id in config.DISABLED_LOCKERS:
+        return jsonify({"success": False, "error": "Casillero fuera de servicio"}), 409
+
     bay = db.get_bay(bay_id)
     if not bay:
         return jsonify({"success": False, "error": "Casillero no existe"}), 404
@@ -188,6 +199,9 @@ def admin_open():
         bay_id = int(data.get('bayId'))
     except (TypeError, ValueError):
         return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    if bay_id in config.DISABLED_LOCKERS:
+        return jsonify({"success": False, "error": "Casillero fuera de servicio"}), 409
 
     if not hardware.open_locker(bay_id):
         log('error', f"Fallo al abrir casillero {bay_id} manualmente")

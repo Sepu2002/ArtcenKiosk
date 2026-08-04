@@ -18,6 +18,16 @@ BASE_DIR = Path(__file__).resolve().parent
 
 NUM_LOCKERS = int(os.environ.get('NUM_LOCKERS', 8))
 
+
+def _parse_id_list(value):
+    return {int(x.strip()) for x in value.split(',') if x.strip()}
+
+
+# Casilleros que existen físicamente pero están fuera de servicio (p.ej. un
+# puerto dañado en la placa). Se excluyen de todo flujo de depósito/apertura
+# y se muestran como "Fuera de Servicio" en vez de sondearlos por serial.
+DISABLED_LOCKERS = _parse_id_list(os.environ.get('DISABLED_LOCKERS', ''))
+
 SERIAL_PORT = os.environ.get('SERIAL_PORT', '/dev/ttyUSB0')
 BAUD_RATE = int(os.environ.get('BAUD_RATE', 9600))
 
