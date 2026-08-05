@@ -48,6 +48,24 @@ server.py (Flask)  ──lee──►  config.py (.env)
   QR embebido). El servidor genera el QR (no el navegador), así que un
   fallo de envío queda registrado en los mismos logs que todo lo demás.
 
+### Dependencias de frontend (`vendor/`)
+
+Tailwind, Font Awesome, QRious y simple-keyboard están vendorizados
+(copiados localmente) en vez de cargarse desde un CDN — el kiosco renderiza
+sin depender de internet, y arranca más rápido al no esperar recursos
+externos. Lo único que sigue necesitando conexión es el envío del correo de
+recogida.
+
+Tailwind en particular se compila (no es solo una descarga) porque el CDN
+sirve un compilador JIT, no un CSS estático. Si se agregan clases de
+Tailwind nuevas en `index.html` o cualquier archivo de `js/` y no aparecen
+estilizadas, hay que recompilar:
+```bash
+tailwindcss -i vendor/tailwind.input.css -o vendor/tailwind.css --minify
+```
+(usa el binario standalone de `tailwindcss` v3.x — no hace falta Node/npm:
+https://github.com/tailwindlabs/tailwindcss/releases)
+
 ### Frontend (`js/`)
 
 | Archivo | Rol |

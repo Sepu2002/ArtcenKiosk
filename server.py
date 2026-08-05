@@ -66,7 +66,7 @@ def index():
 
 @app.route('/<path:filename>')
 def static_files(filename):
-    if filename.split('/')[0] not in ('css', 'js', 'images'):
+    if filename.split('/')[0] not in ('css', 'js', 'images', 'vendor'):
         return jsonify({"success": False, "error": "No encontrado"}), 404
     return send_from_directory(config.BASE_DIR, filename)
 
