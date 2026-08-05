@@ -26,10 +26,12 @@ Navegador (Chromium kiosco)
    │  fetch /api/...
    ▼
 server.py (Flask)  ──lee──►  config.py (.env)
-   │                              
+   │
    ├──► db.py ──► kiosk.db (SQLite: casilleros + auditoría)
    │
-   └──► hardware.py ──serie──► Placa de casilleros
+   ├──► hardware.py ──serie──► Placa de casilleros
+   │
+   └──► mailer.py ──SMTP──► Bandeja del cliente (código + QR)
 ```
 
 - **`server.py`** — único punto de entrada HTTP. Sirve el frontend estático
@@ -42,13 +44,16 @@ server.py (Flask)  ──lee──►  config.py (.env)
   manual.
 - **`hardware.py`** — único lugar que toca el puerto serie. No sabe qué es
   un "casillero", solo abre/consulta canales físicos.
+- **`mailer.py`** — arma y envía por SMTP el correo de recogida (código +
+  QR embebido). El servidor genera el QR (no el navegador), así que un
+  fallo de envío queda registrado en los mismos logs que todo lo demás.
 
 ### Frontend (`js/`)
 
 | Archivo | Rol |
 |---|---|
 | `main.js` | Punto de entrada: carga configuración y estado, conecta los botones principales. |
-| `utils/config.js` | Claves de EmailJS y URL base de la API; `NUM_LOCKERS` se pide al servidor. |
+| `utils/config.js` | URL base de la API; `NUM_LOCKERS` se pide al servidor. |
 | `utils/state.js` | Estado en memoria de los casilleros (`GET /api/lockers`), sin lógica propia de validación. |
 | `utils/hardware.js` | `waitForDoorClose()` — sondea el estado de la puerta hasta que se cierra. |
 | `utils/csv.js` | Exporta un reporte de solo lectura del estado actual. |
@@ -81,6 +86,13 @@ python3 -c "import secrets; print(secrets.token_hex(32))"   # → pegar como SEC
 python3 set_admin_password.py                                 # → pegar como ADMIN_PASSWORD_HASH
 ```
 
+También hay que completar `SMTP_HOST`/`SMTP_USERNAME`/`SMTP_PASSWORD` en
+`.env` para que salga el correo de recogida (código + QR) — sin esto el
+depósito sigue funcionando, pero el correo falla y hay que mostrarle al
+cliente el QR en pantalla como respaldo. Para Gmail: `smtp.gmail.com`,
+puerto `587`, y una [App Password](https://myaccount.google.com/apppasswords)
+(no la contraseña normal — requiere verificación en dos pasos activada).
+
 Ajustar en `.env` lo que corresponda a este sitio (ver tabla abajo), y
 arrancar:
 
@@ -108,6 +120,12 @@ ningún servidor web aparte.
 | `PICKUP_RATE_LIMIT_WINDOW_SECONDS` | `60` | ...dentro de esta ventana, antes de bloquear temporalmente. |
 | `DB_PATH` | `kiosk.db` | Ruta de la base de datos SQLite. |
 | `LOG_FILE` | `action_log.log` | Ruta del archivo de log. |
+| `SMTP_HOST` | *(vacío)* | Servidor SMTP para el correo de recogida. Vacío = envío deshabilitado (se usa solo el QR de respaldo en pantalla). |
+| `SMTP_PORT` | `587` | Puerto SMTP. |
+| `SMTP_USERNAME` | *(vacío)* | Usuario SMTP (normalmente el correo completo). |
+| `SMTP_PASSWORD` | *(vacío)* | Contraseña o App Password SMTP. |
+| `SMTP_FROM_EMAIL` | `SMTP_USERNAME` | Dirección remitente. |
+| `SMTP_FROM_NAME` | `Kiosco de Paquetería` | Nombre remitente. |
 
 `config.py` es la única parte del código que lee estas variables — nada más
 debería tocar `os.environ` directamente.
@@ -127,6 +145,7 @@ administrador (`POST /api/admin/login`); el resto son públicas.
 | `/api/admin/session` | GET | `{ isAdmin }` |
 | `/api/admin/deposit` | POST | `{ bayId, email }` → abre el casillero y genera el código de recogida. |
 | `/api/admin/deposit/confirm` | POST | `{ bayId }` → confirma el depósito una vez cerrada la puerta. |
+| `/api/admin/deposit/send-email` | POST | `{ bayId }` → envía el correo de recogida (código + QR) por SMTP. |
 | `/api/admin/open` | POST | `{ bayId }` → apertura manual (mantenimiento). |
 | `/api/admin/clear` | POST | `{ bayId }` → libera un casillero. |
 | `/api/pickup` | POST | `{ code }` → valida el código y abre el casillero (con límite de intentos). |
@@ -167,9 +186,13 @@ apunta a `/home/pi/ArtcenKiosk/run_kiosk.sh`. Todo lo que imprime queda en
   — suficiente para un kiosco de un solo sitio, pero no pensado para alta
   concurrencia. Si esto se convierte en algo con más tráfico, pasar a un WSGI
   de producción (gunicorn/waitress) sería el siguiente paso natural.
-- El envío de correo usa EmailJS directo desde el navegador (claves
-  públicas por diseño de EmailJS) — vale la pena restringir los orígenes
-  permitidos desde el panel de EmailJS.
+- El correo se envía por SMTP directo (`smtplib`), sin cola ni reintentos —
+  si el proveedor de correo está caído en ese instante, ese envío puntual se
+  pierde (queda registrado en el log, y el operador ve el QR de respaldo en
+  pantalla). Para volumen alto, un servicio transaccional (SES, Postmark,
+  etc.) con reintentos sería más robusto que SMTP directo.
+- Gmail limita el envío a ~500 correos/día en una cuenta normal — de sobra
+  para un kiosco, pero vale la pena saberlo si el volumen crece mucho.
 - Pensado para un único kiosco: todo corre en `127.0.0.1` y el panel de
   administración solo es accesible desde la pantalla del propio kiosco. No
   hay administración remota ni sincronización entre sitios — fue una

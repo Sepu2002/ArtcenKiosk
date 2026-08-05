@@ -6,7 +6,7 @@ import { showModal, closeModal } from './modal.js';
 import { bays, refreshState } from '../utils/state.js';
 import { exportToCSV } from '../utils/csv.js';
 import { waitForDoorClose } from '../utils/hardware.js';
-import { API_BASE, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from '../utils/config.js';
+import { API_BASE } from '../utils/config.js';
 
 export function showAdminLogin() {
     const content = `
@@ -201,26 +201,24 @@ async function handleDeposit() {
 
         await refreshState();
 
-        const emailSent = await sendEmailWithQRCode(email, pickupCode);
+        const emailSent = await sendPickupEmail(selectedBayId, email);
         showQRCodeModal(pickupCode, email, emailSent);
     });
 }
 
-async function sendEmailWithQRCode(toEmail, pickupCode) {
-    if (!EMAILJS_PUBLIC_KEY) {
-        console.warn("Claves de EmailJS no configuradas. Omitiendo envío de correo.");
-        return false;
-    }
-
-    const canvas = document.createElement('canvas');
-    new QRious({ element: canvas, value: pickupCode, size: 256 });
-    const qrCodeImage = canvas.toDataURL('image/png');
-
-    const templateParams = { to_email: toEmail, pickup_code: pickupCode, qr_code_image: qrCodeImage };
-
+async function sendPickupEmail(bayId, toEmail) {
+    showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${toEmail}</p>`, 0);
     try {
-        showModal("Enviando...", `<p class="dark:text-gray-300">Enviando código de recogida a ${toEmail}</p>`, 0);
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+        const response = await fetch(`${API_BASE}/api/admin/deposit/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bayId }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            console.error('Falló al enviar el correo:', result.error);
+            return false;
+        }
         return true;
     } catch (error) {
         console.error('Falló al enviar el correo:', error);

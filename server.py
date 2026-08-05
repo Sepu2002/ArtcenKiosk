@@ -12,6 +12,7 @@ from werkzeug.security import check_password_hash
 import config
 import db
 import hardware
+import mailer
 
 app = Flask(__name__, static_folder=None)
 app.secret_key = config.SECRET_KEY
@@ -189,6 +190,27 @@ def admin_deposit_confirm():
     db.confirm_deposit(bay_id)
     log('info', f"PAQUETE DEPOSITADO en casillero {bay_id} para {bay['customer_email']} (Código: {bay['pickup_code']})")
     return jsonify({"success": True})
+
+
+@app.route('/api/admin/deposit/send-email', methods=['POST'])
+@admin_required
+def admin_send_pickup_email():
+    data = request.get_json(silent=True) or {}
+    try:
+        bay_id = int(data.get('bayId'))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Casillero inválido"}), 400
+
+    bay = db.get_bay(bay_id)
+    if not bay or not bay['pickup_code'] or not bay['customer_email']:
+        return jsonify({"success": False, "error": "No hay un depósito para este casillero"}), 400
+
+    sent, error = mailer.send_pickup_email(bay['customer_email'], bay['pickup_code'], bay_id)
+    if sent:
+        log('info', f"Correo de recogida enviado para casillero {bay_id} a {bay['customer_email']}")
+    else:
+        log('error', f"Fallo al enviar correo de recogida para casillero {bay_id}: {error}")
+    return jsonify({"success": sent, "error": error})
 
 
 # --- Manual maintenance (admin) ---

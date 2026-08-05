@@ -1,6 +1,6 @@
 // Este es el archivo principal que une todo.
 import { initializeState } from './utils/state.js';
-import { API_BASE, loadRemoteConfig, EMAILJS_PUBLIC_KEY, EMAILJS_SERVICE_ID } from './utils/config.js';
+import { API_BASE, loadRemoteConfig } from './utils/config.js';
 import { showAdminLogin, showAdminPanel } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
 
@@ -51,10 +51,6 @@ async function initialize() {
 
     await loadRemoteConfig();
     await initializeState();
-
-    if (EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID) {
-        window.emailjs.init(EMAILJS_PUBLIC_KEY);
-    }
 
     adminLoginButton.addEventListener('click', openAdmin);
     pickupPackageButton.addEventListener('click', showPickupScreen);

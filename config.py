@@ -67,6 +67,14 @@ PICKUP_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get('PICKUP_RATE_LIMIT_WINDOW_
 DB_PATH = os.environ.get('DB_PATH', str(BASE_DIR / 'kiosk.db'))
 LOG_FILE = os.environ.get('LOG_FILE', str(BASE_DIR / 'action_log.log'))
 
+# Correo de recogida (código + QR), enviado desde el servidor por SMTP.
+SMTP_HOST = os.environ.get('SMTP_HOST', '')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM_EMAIL = os.environ.get('SMTP_FROM_EMAIL', SMTP_USERNAME)
+SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'Kiosco de Paquetería')
+
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
