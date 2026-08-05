@@ -38,7 +38,7 @@ def _send_serial_command(command):
             ser.flushOutput()
             ser.write(command)
             time.sleep(0.1)
-            return ser.read(RESPONSE_LENGTH * 2)
+            return ser.read(RESPONSE_LENGTH)
     except serial.SerialException as e:
         print(f"SERIAL ERROR: {e}")
         return None
