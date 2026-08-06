@@ -71,9 +71,14 @@ LOG_FILE = os.environ.get('LOG_FILE', str(BASE_DIR / 'action_log.log'))
 # exactamente como hoy (sin encabezado de logo, botón azul de siempre, sin
 # pie de página). Un cliente se personaliza completando estos valores en
 # .env, sin tocar código — mismo patrón que NUM_LOCKERS/LOCKER_CHANNELS.
+# Usado solo como texto alternativo (accesibilidad) del logo — el nombre ya
+# no se muestra como texto en pantalla, se asume que el logo lo incluye.
 BRAND_NAME = os.environ.get('BRAND_NAME', '')
-# Ruta relativa a un archivo dentro de branding/, p.ej. "branding/logo.png"
+# Rutas relativas a archivos dentro de branding/, p.ej. "branding/logo_a.png".
+# BRAND_LOGO se usa en modo claro. BRAND_LOGO_DARK se usa en modo oscuro; si
+# se deja vacío, el modo oscuro simplemente reutiliza BRAND_LOGO.
 BRAND_LOGO = os.environ.get('BRAND_LOGO', '')
+BRAND_LOGO_DARK = os.environ.get('BRAND_LOGO_DARK', '')
 BRAND_COLOR = os.environ.get('BRAND_COLOR', '#2563eb')
 BRAND_FOOTER = os.environ.get('BRAND_FOOTER', '')
 

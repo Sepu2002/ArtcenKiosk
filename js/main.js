@@ -1,6 +1,6 @@
 // Este es el archivo principal que une todo.
 import { initializeState } from './utils/state.js';
-import { API_BASE, loadRemoteConfig, BRAND_NAME, BRAND_LOGO, BRAND_COLOR, BRAND_FOOTER } from './utils/config.js';
+import { API_BASE, loadRemoteConfig, BRAND_NAME, BRAND_LOGO, BRAND_LOGO_DARK, BRAND_COLOR, BRAND_FOOTER } from './utils/config.js';
 import { showAdminLogin, showAdminPanel } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
 
@@ -21,6 +21,7 @@ function toggleTheme() {
         themeIcon.classList.replace('fa-sun', 'fa-moon');
     }
     localStorage.setItem('kioskTheme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+    updateBrandLogo();
 }
 
 function applyStoredTheme() {
@@ -31,21 +32,28 @@ function applyStoredTheme() {
 }
 
 // --- MARCA DEL CLIENTE: aplica lo que haya en .env, o deja el look por defecto ---
+function updateBrandLogo() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const src = (isDark && BRAND_LOGO_DARK) ? BRAND_LOGO_DARK : BRAND_LOGO;
+
+    const logo = document.getElementById('brand-logo');
+    if (src) {
+        logo.src = src;
+        logo.alt = BRAND_NAME || 'Logo';
+        logo.classList.remove('hidden-input');
+    } else {
+        logo.classList.add('hidden-input');
+    }
+}
+
 function applyBranding() {
     document.documentElement.style.setProperty('--brand-color', BRAND_COLOR);
 
-    if (BRAND_NAME || BRAND_LOGO) {
+    if (BRAND_LOGO || BRAND_LOGO_DARK) {
         document.getElementById('brand-header').classList.remove('hidden-input');
     }
-    if (BRAND_NAME) {
-        document.getElementById('brand-name').textContent = BRAND_NAME;
-    }
-    if (BRAND_LOGO) {
-        const logo = document.getElementById('brand-logo');
-        logo.src = BRAND_LOGO;
-        logo.alt = BRAND_NAME || 'Logo';
-        logo.classList.remove('hidden-input');
-    }
+    updateBrandLogo();
+
     if (BRAND_FOOTER) {
         const footer = document.getElementById('brand-footer');
         footer.textContent = BRAND_FOOTER;

@@ -78,6 +78,7 @@ def api_config():
         "numLockers": config.NUM_LOCKERS,
         "brandName": config.BRAND_NAME,
         "brandLogo": config.BRAND_LOGO,
+        "brandLogoDark": config.BRAND_LOGO_DARK,
         "brandColor": config.BRAND_COLOR,
         "brandFooter": config.BRAND_FOOTER,
     })

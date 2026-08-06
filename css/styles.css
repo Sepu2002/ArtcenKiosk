@@ -76,19 +76,9 @@ html.dark .subtitle {
 }
 
 .brand-logo {
-    height: 2.5rem;
-    max-width: 10rem;
+    height: 6.25rem; /* 2.5x del tamaño original */
+    max-width: 25rem;
     object-fit: contain;
-}
-
-.brand-name {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1f2937;
-}
-
-html.dark .brand-name {
-    color: #f9fafb;
 }
 
 .brand-footer {

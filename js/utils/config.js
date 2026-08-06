@@ -9,6 +9,7 @@ export const API_BASE = '';
 export let NUM_LOCKERS = 8;
 export let BRAND_NAME = '';
 export let BRAND_LOGO = '';
+export let BRAND_LOGO_DARK = '';
 export let BRAND_COLOR = '#2563eb';
 export let BRAND_FOOTER = '';
 
@@ -24,6 +25,7 @@ export async function loadRemoteConfig() {
         if (data.numLockers) NUM_LOCKERS = data.numLockers;
         if (data.brandName) BRAND_NAME = data.brandName;
         if (data.brandLogo) BRAND_LOGO = data.brandLogo;
+        if (data.brandLogoDark) BRAND_LOGO_DARK = data.brandLogoDark;
         if (data.brandColor) BRAND_COLOR = data.brandColor;
         if (data.brandFooter) BRAND_FOOTER = data.brandFooter;
     } catch (e) {
