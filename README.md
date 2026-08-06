@@ -79,47 +79,208 @@ https://github.com/tailwindlabs/tailwindcss/releases)
 | `widgets/admin.js` | Login, panel de administración, depósito, gestión de casilleros. |
 | `widgets/customer.js` | Pantalla de recogida (código manual o escaneado). |
 
-## Puesta en marcha
+## Configurar un casillero nuevo desde cero
+
+Guía completa, en orden, para dejar un Raspberry Pi nuevo funcionando como
+kiosco de punta a punta — pensada para que alguien sin contexto previo del
+proyecto la pueda seguir tal cual. Cada bloque se ejecuta en la terminal del
+Pi (por SSH o directo).
+
+### 1. Clonar el repositorio
 
 ```bash
+cd /home/pi
 git clone https://github.com/Sepu2002/ArtcenKiosk.git
 cd ArtcenKiosk
+```
+
+### 2. Entorno de Python
+
+```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+deactivate
 ```
 
-Dar acceso al puerto serie sin necesitar `sudo`:
+### 3. Dar acceso al puerto serie sin `sudo`
 
 ```bash
 sudo usermod -aG dialout $USER
-sudo reboot   # el grupo solo aplica en una sesión nueva
+sudo reboot
 ```
 
-Configurar el sitio:
+El grupo solo aplica en una sesión nueva — por eso el reboot. Después de
+reiniciar, confirmar que aplicó:
 
 ```bash
-cp .env.example .env
-python3 -c "import secrets; print(secrets.token_hex(32))"   # → pegar como SECRET_KEY
-python3 set_admin_password.py                                 # → pegar como ADMIN_PASSWORD_HASH
+groups
 ```
 
-También hay que completar `SMTP_HOST`/`SMTP_USERNAME`/`SMTP_PASSWORD` en
-`.env` para que salga el correo de recogida (código + QR) — sin esto el
-depósito sigue funcionando, pero el correo falla y hay que mostrarle al
-cliente el QR en pantalla como respaldo. Para Gmail: `smtp.gmail.com`,
-puerto `587`, y una [App Password](https://myaccount.google.com/apppasswords)
-(no la contraseña normal — requiere verificación en dos pasos activada).
+debe listar `dialout`. Si no aparece, repetir el `usermod` y reiniciar de
+nuevo antes de seguir.
 
-Ajustar en `.env` lo que corresponda a este sitio (ver tabla abajo), y
-arrancar:
+### 4. Crear el archivo de configuración
+
+```bash
+cd /home/pi/ArtcenKiosk
+cp .env.example .env
+```
+
+### 5. Clave de sesión y contraseña de administrador
+
+```bash
+SECRET_KEY_VALUE=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY_VALUE|" .env
+
+read -s -p "Contraseña de administrador: " ADMIN_PW
+echo
+ADMIN_HASH=$(echo "$ADMIN_PW" | ./venv/bin/python -c "
+import sys
+from werkzeug.security import generate_password_hash
+print(generate_password_hash(sys.stdin.readline().strip()))
+")
+sed -i "s|^ADMIN_PASSWORD_HASH=.*|ADMIN_PASSWORD_HASH=$ADMIN_HASH|" .env
+unset ADMIN_PW ADMIN_HASH SECRET_KEY_VALUE
+```
+
+Confirmar que ambas quedaron con valor (no vacías):
+
+```bash
+grep -E '^(SECRET_KEY|ADMIN_PASSWORD_HASH)=' .env
+```
+
+### 6. Cantidad y mapeo de casilleros
+
+Cuántas puertas físicas tiene este sitio:
+
+```bash
+sed -i "/^NUM_LOCKERS=/d" .env
+echo "NUM_LOCKERS=8" >> .env
+```
+
+Si algún puerto de la placa está dañado y las puertas se recablearon a otro
+canal, mapear casillero lógico → canal físico en orden (ver `LOCKER_CHANNELS`
+en la tabla de variables más abajo para el ejemplo completo). Si un
+casillero existe pero no se puede usar, excluirlo:
+
+```bash
+sed -i "/^LOCKER_CHANNELS=/d" .env
+echo "LOCKER_CHANNELS=1,2,3,4,5,6,7,8" >> .env
+sed -i "/^DISABLED_LOCKERS=/d" .env
+echo "DISABLED_LOCKERS=" >> .env
+```
+
+### 7. Puerto serie de la placa controladora
+
+```bash
+ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+```
+
+Usar lo que aparezca ahí (normalmente `/dev/ttyUSB0`):
+
+```bash
+sed -i "/^SERIAL_PORT=/d" .env
+echo "SERIAL_PORT=/dev/ttyUSB0" >> .env
+```
+
+### 8. Correo de recogida (código + QR)
+
+Ejemplo con Gmail — requiere verificación en 2 pasos activada en esa cuenta
+y una [App Password](https://myaccount.google.com/apppasswords) generada
+específicamente (no sirve la contraseña normal de la cuenta):
+
+```bash
+sed -i "/^SMTP_HOST=/d" .env
+echo "SMTP_HOST=smtp.gmail.com" >> .env
+sed -i "/^SMTP_PORT=/d" .env
+echo "SMTP_PORT=587" >> .env
+sed -i "/^SMTP_USERNAME=/d" .env
+echo "SMTP_USERNAME=correo@gmail.com" >> .env
+sed -i "/^SMTP_PASSWORD=/d" .env
+echo "SMTP_PASSWORD=contraseña-de-aplicación-de-16-caracteres" >> .env
+```
+
+Sin esto configurado, el depósito sigue funcionando con normalidad, pero el
+envío de correo falla silenciosamente (queda en el log) y hay que mostrarle
+el código QR en pantalla al cliente como respaldo.
+
+### 9. Marca del cliente (logo, color) — opcional
+
+Copiar el/los archivo(s) de logo a la carpeta `branding/` del proyecto (por
+`scp` desde otra máquina, o USB — ver `branding/README.md`), luego:
+
+```bash
+sed -i "/^BRAND_LOGO=/d" .env
+echo "BRAND_LOGO=branding/logo_a.png" >> .env
+sed -i "/^BRAND_LOGO_DARK=/d" .env
+echo "BRAND_LOGO_DARK=branding/logo_b.png" >> .env
+sed -i "/^BRAND_COLOR=/d" .env
+echo "BRAND_COLOR=#111827" >> .env
+sed -i "/^BRAND_FOOTER=/d" .env
+echo "BRAND_FOOTER=soporte@cliente.com" >> .env
+```
+
+`BRAND_LOGO_DARK` es opcional (si se omite, el modo oscuro reutiliza
+`BRAND_LOGO`), igual que `BRAND_FOOTER`. Sin nada de esto, el kiosco se ve
+con el look por defecto (sin logo, botón azul, sin pie de página).
+
+### 10. Probar el servidor manualmente
 
 ```bash
 ./venv/bin/python server.py
 ```
 
-El frontend queda servido en `http://127.0.0.1:5000/` — no hace falta
-ningún servidor web aparte.
+Debe arrancar sin errores y mostrar `Frontend + API listos en
+http://127.0.0.1:5000/`. En otra terminal, confirmar que responde:
+
+```bash
+curl http://127.0.0.1:5000/api/lockers
+```
+
+`Ctrl+C` para detenerlo una vez confirmado — el arranque automático (paso
+siguiente) es el que lo deja corriendo de verdad.
+
+### 11. Arranque automático al iniciar el Pi
+
+```bash
+chmod +x /home/pi/ArtcenKiosk/run_kiosk.sh
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/kiosk.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=ArtcenKiosk
+Exec=/home/pi/ArtcenKiosk/run_kiosk.sh
+X-GNOME-Autostart-enabled=true
+EOF
+```
+
+Esto asume que el Pi ya está configurado para iniciar sesión automáticamente
+en el escritorio (`raspi-config` → System Options → Boot / Auto Login →
+Desktop Autologin) — sin eso, nada dispara `run_kiosk.sh`. Ver "Despliegue
+en el kiosco" más abajo para el detalle de qué hace ese script paso a paso.
+
+### 12. Reiniciar y verificar
+
+```bash
+sudo reboot
+```
+
+Después de reiniciar, Chromium debería abrir solo en pantalla completa
+mostrando el kiosco. Si algo falla, el primer lugar donde mirar es:
+
+```bash
+tail -50 /home/pi/ArtcenKiosk/kiosk_launch.log
+```
+
+Para actualizar el código más adelante (no hace falta repetir nada de lo
+anterior, salvo que cambien las dependencias):
+
+```bash
+cd /home/pi/ArtcenKiosk
+git pull
+pkill -f "venv/bin/python server.py"   # el watchdog de run_kiosk.sh lo reinicia solo
+```
 
 ## Variables de entorno (`.env`)
 
