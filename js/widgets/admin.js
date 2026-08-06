@@ -235,8 +235,8 @@ function showQRCodeModal(pickupCode, email, isConfirmation = false) {
     const content = `
         <p class="mb-4 text-center dark:text-gray-300">${message}</p>
         <div class="flex justify-center mb-4 bg-white p-2 rounded-lg"><canvas id="qr-canvas"></canvas></div>
-        <p class="text-center text-2xl font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded">${pickupCode}</p>
-        <p class="text-center text-sm text-gray-500 mt-2">Para: ${email}</p>
+        <p class="text-center text-2xl font-mono bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 rounded">${pickupCode}</p>
+        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">Para: ${email}</p>
          <button id="qr-close-btn" class="w-full mt-4 bg-gray-500 text-white p-2 rounded-lg">Cerrar y Ver Panel</button>
     `;
     showModal(title, content);
@@ -318,7 +318,7 @@ function showManageBaysScreen() {
 
 function confirmClearBay(bayId) {
     const content = `
-        <p class="mb-4">¿Seguro que quieres liberar el Casillero ${bayId}? Esto lo marcará como disponible y borrará su código. Esta acción no se puede deshacer.</p>
+        <p class="mb-4 text-gray-700 dark:text-gray-300">¿Seguro que quieres liberar el Casillero ${bayId}? Esto lo marcará como disponible y borrará su código. Esta acción no se puede deshacer.</p>
         <div class="flex justify-end space-x-3">
             <button id="cancel-clear-btn" class="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
             <button id="confirm-clear-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg">Sí, Liberar</button>
