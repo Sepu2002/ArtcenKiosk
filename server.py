@@ -66,7 +66,7 @@ def index():
 
 @app.route('/<path:filename>')
 def static_files(filename):
-    if filename.split('/')[0] not in ('css', 'js', 'images', 'vendor'):
+    if filename.split('/')[0] not in ('css', 'js', 'images', 'vendor', 'branding'):
         return jsonify({"success": False, "error": "No encontrado"}), 404
     return send_from_directory(config.BASE_DIR, filename)
 
@@ -74,7 +74,13 @@ def static_files(filename):
 # --- Config ---
 @app.route('/api/config')
 def api_config():
-    return jsonify({"numLockers": config.NUM_LOCKERS})
+    return jsonify({
+        "numLockers": config.NUM_LOCKERS,
+        "brandName": config.BRAND_NAME,
+        "brandLogo": config.BRAND_LOGO,
+        "brandColor": config.BRAND_COLOR,
+        "brandFooter": config.BRAND_FOOTER,
+    })
 
 
 # --- Locker status (hardware + DB merged) ---

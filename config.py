@@ -67,6 +67,16 @@ PICKUP_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get('PICKUP_RATE_LIMIT_WINDOW_
 DB_PATH = os.environ.get('DB_PATH', str(BASE_DIR / 'kiosk.db'))
 LOG_FILE = os.environ.get('LOG_FILE', str(BASE_DIR / 'action_log.log'))
 
+# Identidad de marca por sitio. Todo vacío por defecto = el kiosco se ve
+# exactamente como hoy (sin encabezado de logo, botón azul de siempre, sin
+# pie de página). Un cliente se personaliza completando estos valores en
+# .env, sin tocar código — mismo patrón que NUM_LOCKERS/LOCKER_CHANNELS.
+BRAND_NAME = os.environ.get('BRAND_NAME', '')
+# Ruta relativa a un archivo dentro de branding/, p.ej. "branding/logo.png"
+BRAND_LOGO = os.environ.get('BRAND_LOGO', '')
+BRAND_COLOR = os.environ.get('BRAND_COLOR', '#2563eb')
+BRAND_FOOTER = os.environ.get('BRAND_FOOTER', '')
+
 # Correo de recogida (código + QR), enviado desde el servidor por SMTP.
 SMTP_HOST = os.environ.get('SMTP_HOST', '')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))

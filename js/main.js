@@ -1,6 +1,6 @@
 // Este es el archivo principal que une todo.
 import { initializeState } from './utils/state.js';
-import { API_BASE, loadRemoteConfig } from './utils/config.js';
+import { API_BASE, loadRemoteConfig, BRAND_NAME, BRAND_LOGO, BRAND_COLOR, BRAND_FOOTER } from './utils/config.js';
 import { showAdminLogin, showAdminPanel } from './widgets/admin.js';
 import { showPickupScreen } from './widgets/customer.js';
 
@@ -30,6 +30,29 @@ function applyStoredTheme() {
     }
 }
 
+// --- MARCA DEL CLIENTE: aplica lo que haya en .env, o deja el look por defecto ---
+function applyBranding() {
+    document.documentElement.style.setProperty('--brand-color', BRAND_COLOR);
+
+    if (BRAND_NAME || BRAND_LOGO) {
+        document.getElementById('brand-header').classList.remove('hidden-input');
+    }
+    if (BRAND_NAME) {
+        document.getElementById('brand-name').textContent = BRAND_NAME;
+    }
+    if (BRAND_LOGO) {
+        const logo = document.getElementById('brand-logo');
+        logo.src = BRAND_LOGO;
+        logo.alt = BRAND_NAME || 'Logo';
+        logo.classList.remove('hidden-input');
+    }
+    if (BRAND_FOOTER) {
+        const footer = document.getElementById('brand-footer');
+        footer.textContent = BRAND_FOOTER;
+        footer.classList.remove('hidden-input');
+    }
+}
+
 // --- ADMIN: reutiliza la sesión del servidor si ya hay una activa ---
 async function openAdmin() {
     try {
@@ -50,6 +73,7 @@ async function initialize() {
     applyStoredTheme();
 
     await loadRemoteConfig();
+    applyBranding();
     await initializeState();
 
     adminLoginButton.addEventListener('click', openAdmin);

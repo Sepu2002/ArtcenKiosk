@@ -144,9 +144,14 @@ ningún servidor web aparte.
 | `SMTP_PASSWORD` | *(vacío)* | Contraseña o App Password SMTP. |
 | `SMTP_FROM_EMAIL` | `SMTP_USERNAME` | Dirección remitente. |
 | `SMTP_FROM_NAME` | `Kiosco de Paquetería` | Nombre remitente. |
+| `BRAND_NAME` | *(vacío)* | Nombre del cliente, mostrado junto al logo. Vacío = sin encabezado de marca. |
+| `BRAND_LOGO` | *(vacío)* | Ruta relativa a un logo dentro de `branding/` (ej. `branding/logo.png`). Ver `branding/README.md`. |
+| `BRAND_COLOR` | `#2563eb` | Color del botón principal y acentos de marca. |
+| `BRAND_FOOTER` | *(vacío)* | Texto de pie de página (contacto, "powered by", etc). Vacío = sin pie de página. |
 
 `config.py` es la única parte del código que lee estas variables — nada más
-debería tocar `os.environ` directamente.
+debería tocar `os.environ` directamente. Con todas las `BRAND_*` vacías el
+kiosco se ve exactamente igual que antes de que existiera esta función.
 
 ## API
 

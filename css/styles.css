@@ -66,20 +66,55 @@ html.dark .subtitle {
     color: #9ca3af; /* dark:text-gray-400 */
 }
 
+/* --- Marca del cliente (opcional, ver branding/README.md) --- */
+.brand-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.brand-logo {
+    height: 2.5rem;
+    max-width: 10rem;
+    object-fit: contain;
+}
+
+.brand-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+html.dark .brand-name {
+    color: #f9fafb;
+}
+
+.brand-footer {
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+html.dark .brand-footer {
+    color: #6b7280;
+}
+
 /* --- Buttons --- */
 .action-button {
-    background-color: #2563eb; /* bg-blue-600 */
+    background-color: var(--brand-color, #2563eb);
     color: white;
     font-weight: 700;
     padding: 1.5rem 3rem;
     border-radius: 1rem;
     font-size: 1.5rem; /* text-2xl */
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    transition: background-color 0.2s, transform 0.2s;
+    transition: filter 0.2s, transform 0.2s;
 }
 
 .action-button:hover {
-    background-color: #1d4ed8; /* hover:bg-blue-700 */
+    filter: brightness(0.88);
     transform: scale(1.05);
 }
 

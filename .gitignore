@@ -5,3 +5,7 @@ venv/
 .venv/
 *.db
 action_log.log*
+
+# Client-specific logo files stay local per site, not in shared git history
+branding/*
+!branding/README.md
